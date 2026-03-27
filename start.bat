@@ -6,49 +6,69 @@ echo   OpenRouter Cost Dashboard - Starting
 echo ==========================================
 echo.
 
-REM Kill processes on ports 3001 and 5173
-echo Cleaning ports...
+REM ============================================
+REM 1. INICIAR POSTGRESQL
+REM ============================================
+echo [1/4] Verificando PostgreSQL...
+
+sc query postgresql-x64-18 | find "RUNNING" >nul
+if %errorlevel% neq 0 (
+    echo Iniciando PostgreSQL...
+    net start postgresql-x64-18
+    timeout /t 3 /nobreak >nul
+) else (
+    echo PostgreSQL ja esta rodando.
+)
+
+REM ============================================
+REM 2. LIMPAR PORTAS
+REM ============================================
+echo [2/4] Limpando portas 3001 e 5173...
 for /f "tokens=5" %%a in ('netstat -aon ^| findstr :3001') do taskkill /F /PID %%a >nul 2>&1
 for /f "tokens=5" %%a in ('netstat -aon ^| findstr :5173') do taskkill /F /PID %%a >nul 2>&1
-
-REM Wait a bit
 timeout /t 2 /nobreak >nul
 
-REM Check if node_modules exists
+REM ============================================
+REM 3. INSTALAR DEPENDENCIAS (se necessario)
+REM ============================================
+echo [3/4] Verificando dependencias...
 if not exist "server\node_modules" (
-    echo Installing server dependencies...
-    cd server
-    call npm install
-    cd ..
+    echo Instalando dependencias do servidor...
+    cd server && call npm install && cd ..
 )
-
 if not exist "client\node_modules" (
-    echo Installing client dependencies...
-    cd client
-    call npm install
-    cd ..
+    echo Instalando dependencias do cliente...
+    cd client && call npm install && cd ..
 )
 
-echo.
-echo Starting Backend Server (port 3001)...
-cd server
-start "Backend Server" cmd /k "npm run dev"
+REM ============================================
+REM 4. INICIAR SERVICOS
+REM ============================================
+echo [4/4] Iniciando Backend e Frontend...
 
-echo Starting Frontend (port 5173)...
-cd ..\client
-start "Frontend" cmd /k "npm run dev"
+REM Salva o diretorio atual
+set START_DIR=%CD%
+
+REM Abre primeira aba - Backend
+wt new-tab --title "Backend" -d "%START_DIR%\server" cmd /k "npm run dev"
+
+REM Abre segunda aba - Frontend  
+wt new-tab --title "Frontend" -d "%START_DIR%\client" cmd /k "npm run dev -- --host"
 
 echo.
 echo ==========================================
-echo   Dashboard starting...
-echo   Backend: http://localhost:3001
-echo   Frontend: http://localhost:5173
+echo   Aguardando servidores iniciarem...
 echo ==========================================
 echo.
-echo Close this window or press Ctrl+C to exit
+echo   PostgreSQL: localhost:5432
+echo   Backend:    http://localhost:3001
+echo   Frontend:   http://localhost:5173
+echo ==========================================
 
-REM Open browser
 timeout /t 5 /nobreak >nul
+echo Abrindo navegador...
 start http://localhost:5173
 
-pause
+echo.
+echo Pressione qualquer tecla para fechar esta janela...
+pause >nul

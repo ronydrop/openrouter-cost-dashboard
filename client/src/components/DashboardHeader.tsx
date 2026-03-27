@@ -1,29 +1,13 @@
-import { Activity, RefreshCw, AlertCircle, CheckCircle } from 'lucide-react';
+import { Activity, AlertCircle, CheckCircle, Sun, Moon } from 'lucide-react';
 import { useHealthCheck } from '../hooks/useDashboard';
-import { DateRangeFilter } from './DateRangeFilter';
-import type { DateRange } from '../types';
+import { useTheme } from '../hooks/useTheme';
 
-interface DashboardHeaderProps {
-  selectedRange: DateRange;
-  onRangeChange: (range: DateRange) => void;
-  customDateRange?: { start: string; end: string };
-  onCustomDateRangeChange?: (range: { start: string; end: string }) => void;
-  onRefresh: () => void;
-  isRefreshing: boolean;
-}
-
-export function DashboardHeader({
-  selectedRange,
-  onRangeChange,
-  customDateRange,
-  onCustomDateRangeChange,
-  onRefresh,
-  isRefreshing,
-}: DashboardHeaderProps) {
+export function DashboardHeader() {
   const { data: health } = useHealthCheck();
+  const { theme, toggleTheme } = useTheme();
 
   return (
-    <header className="bg-white border-b border-gray-200 sticky top-0 z-50">
+    <header className="bg-white border-b border-gray-200 dark:bg-slate-800 dark:border-slate-700 sticky top-0 z-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
           <div className="flex items-center gap-4">
@@ -32,8 +16,8 @@ export function DashboardHeader({
                 <Activity className="text-white" size={24} />
               </div>
               <div>
-                <h1 className="text-xl font-bold text-gray-900">OpenRouter Cost Dashboard</h1>
-                <p className="text-sm text-gray-500">Análise de gastos com IA</p>
+                <h1 className="text-xl font-bold text-gray-900 dark:text-white">OpenRouter Cost Dashboard</h1>
+                <p className="text-sm text-gray-500 dark:text-gray-400">Análise de gastos com IA</p>
               </div>
             </div>
             
@@ -41,36 +25,28 @@ export function DashboardHeader({
               {health?.status === 'ok' ? (
                 <>
                   <CheckCircle className="text-green-500" size={16} />
-                  <span className="text-xs text-green-600 font-medium">API OK</span>
+                  <span className="text-xs text-green-600 font-medium dark:text-green-400">API OK</span>
                 </>
               ) : (
                 <>
                   <AlertCircle className="text-red-500" size={16} />
-                  <span className="text-xs text-red-600 font-medium">Erro API</span>
+                  <span className="text-xs text-red-600 font-medium dark:text-red-400">Erro API</span>
                 </>
               )}
             </div>
           </div>
 
-          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
-            <DateRangeFilter
-              selectedRange={selectedRange}
-              onRangeChange={onRangeChange}
-              customDateRange={customDateRange}
-              onCustomDateRangeChange={onCustomDateRangeChange}
-            />
-            
-            <div className="flex items-center gap-3">
-              <button
-                onClick={onRefresh}
-                disabled={isRefreshing}
-                className="btn btn-secondary flex items-center gap-2"
-              >
-                <RefreshCw size={16} className={isRefreshing ? 'animate-spin' : ''} />
-                {isRefreshing ? 'Atualizando...' : 'Atualizar'}
-              </button>
-            </div>
-          </div>
+          <button
+            onClick={toggleTheme}
+            className="p-2 rounded-lg bg-gray-100 hover:bg-gray-200 dark:bg-slate-700 dark:hover:bg-slate-600 transition-colors"
+            aria-label="Toggle dark mode"
+          >
+            {theme === 'dark' ? (
+              <Sun className="text-yellow-500" size={20} />
+            ) : (
+              <Moon className="text-gray-600" size={20} />
+            )}
+          </button>
         </div>
       </div>
     </header>

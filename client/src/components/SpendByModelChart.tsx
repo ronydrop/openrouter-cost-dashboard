@@ -28,13 +28,13 @@ export function SpendByModelChart({ data, loading }: SpendByModelChartProps) {
   if (loading) {
     return (
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="chart-container animate-pulse">
-          <div className="h-6 bg-gray-200 rounded w-1/3 mb-4"></div>
-          <div className="h-64 bg-gray-200 rounded"></div>
+        <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 p-6 animate-pulse">
+          <div className="h-6 bg-gray-200 dark:bg-gray-700 rounded w-1/3 mb-4"></div>
+          <div className="h-64 bg-gray-200 dark:bg-gray-700 rounded"></div>
         </div>
-        <div className="chart-container animate-pulse">
-          <div className="h-6 bg-gray-200 rounded w-1/3 mb-4"></div>
-          <div className="h-64 bg-gray-200 rounded"></div>
+        <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 p-6 animate-pulse">
+          <div className="h-6 bg-gray-200 dark:bg-gray-700 rounded w-1/3 mb-4"></div>
+          <div className="h-64 bg-gray-200 dark:bg-gray-700 rounded"></div>
         </div>
       </div>
     );
@@ -43,15 +43,15 @@ export function SpendByModelChart({ data, loading }: SpendByModelChartProps) {
   if (!data?.length) {
     return (
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="chart-container">
-          <h3 className="text-lg font-semibold text-gray-800 mb-4">Gasto por Modelo</h3>
-          <div className="h-64 flex items-center justify-center text-gray-500">
+        <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 p-6">
+          <h3 className="text-lg font-semibold text-gray-800 dark:text-white mb-4">Gasto por Modelo</h3>
+          <div className="h-64 flex items-center justify-center text-gray-500 dark:text-gray-400">
             Nenhum dado disponível
           </div>
         </div>
-        <div className="chart-container">
-          <h3 className="text-lg font-semibold text-gray-800 mb-4">Distribuição por Modelo</h3>
-          <div className="h-64 flex items-center justify-center text-gray-500">
+        <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 p-6">
+          <h3 className="text-lg font-semibold text-gray-800 dark:text-white mb-4">Distribuição por Modelo</h3>
+          <div className="h-64 flex items-center justify-center text-gray-500 dark:text-gray-400">
             Nenhum dado disponível
           </div>
         </div>
@@ -83,12 +83,12 @@ export function SpendByModelChart({ data, loading }: SpendByModelChartProps) {
     if (active && payload && payload.length) {
       const chartData = payload[0].payload;
       return (
-        <div className="bg-white p-3 border border-gray-200 rounded-lg shadow-lg">
-          <p className="font-semibold text-gray-800 mb-1">{chartData.fullName}</p>
-          <p className="text-primary-600">
+        <div className="bg-white dark:bg-slate-800 p-3 border border-gray-200 dark:border-slate-700 rounded-lg shadow-lg">
+          <p className="font-semibold text-gray-800 dark:text-white mb-1">{chartData.fullName}</p>
+          <p className="text-primary-600 dark:text-primary-400">
             {formatCurrency(chartData.value)} ({formatCurrencyBrl(chartData.valueBrl)})
           </p>
-          <p className="text-gray-500 text-sm">
+          <p className="text-gray-500 dark:text-gray-400 text-sm">
             Participação: {formatPercent(chartData.percent)}
           </p>
         </div>
@@ -99,11 +99,11 @@ export function SpendByModelChart({ data, loading }: SpendByModelChartProps) {
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-      <div className="chart-container">
-        <h3 className="text-lg font-semibold text-gray-800 mb-4">Gasto por Modelo (Top 10)</h3>
+      <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 p-6">
+        <h3 className="text-lg font-semibold text-gray-800 dark:text-white mb-4">Gasto por Modelo (Top 10)</h3>
         <ResponsiveContainer width="100%" height={280}>
           <BarChart data={barData} layout="vertical">
-            <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+            <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" className="dark:stroke-slate-700" />
             <XAxis 
               type="number" 
               stroke="#9ca3af"
@@ -128,8 +128,8 @@ export function SpendByModelChart({ data, loading }: SpendByModelChartProps) {
         </ResponsiveContainer>
       </div>
 
-      <div className="chart-container">
-        <h3 className="text-lg font-semibold text-gray-800 mb-4">Distribuição por Modelo</h3>
+      <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 p-6">
+        <h3 className="text-lg font-semibold text-gray-800 dark:text-white mb-4">Distribuição por Modelo</h3>
         <ResponsiveContainer width="100%" height={280}>
           <PieChart>
             <Pie
@@ -147,7 +147,7 @@ export function SpendByModelChart({ data, loading }: SpendByModelChartProps) {
             </Pie>
             <Tooltip content={<CustomTooltip />} />
             <Legend
-              formatter={(value: string) => <span className="text-xs text-gray-600">{value}</span>}
+              formatter={(value: string) => <span className="text-xs text-gray-600 dark:text-gray-400">{value}</span>}
               wrapperStyle={{ fontSize: 10 }}
             />
           </PieChart>

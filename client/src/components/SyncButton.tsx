@@ -1,4 +1,6 @@
 import { format } from '../utils/formatters';
+import { DateRangeFilter } from './DateRangeFilter';
+import type { DateRange } from '../types';
 
 interface SyncButtonProps {
   onSync: () => void;
@@ -6,12 +8,26 @@ interface SyncButtonProps {
   hasData: boolean;
   error?: string | null;
   lastSync?: string;
+  selectedRange: DateRange;
+  onRangeChange: (range: DateRange) => void;
+  customDateRange?: { start: string; end: string };
+  onCustomDateRangeChange?: (range: { start: string; end: string }) => void;
 }
 
-export function SyncButton({ onSync, isSyncing, hasData, error, lastSync }: SyncButtonProps) {
+export function SyncButton({ 
+  onSync, 
+  isSyncing, 
+  hasData, 
+  error, 
+  lastSync,
+  selectedRange,
+  onRangeChange,
+  customDateRange,
+  onCustomDateRangeChange
+}: SyncButtonProps) {
   return (
-    <div className="bg-white rounded-lg shadow p-4">
-      <div className="flex items-center justify-between">
+    <div className="bg-white dark:bg-slate-800 rounded-lg shadow border border-gray-200 dark:border-slate-700 p-4">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div className="flex items-center space-x-4">
           <button
             onClick={onSync}
@@ -19,7 +35,7 @@ export function SyncButton({ onSync, isSyncing, hasData, error, lastSync }: Sync
             className={`px-4 py-2 rounded-lg font-medium transition-colors ${
               isSyncing
                 ? 'bg-blue-400 text-white cursor-not-allowed'
-                : 'bg-blue-600 text-white hover:bg-blue-700'
+                : 'bg-blue-600 text-white hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-600'
             }`}
           >
             {isSyncing ? (
@@ -35,14 +51,14 @@ export function SyncButton({ onSync, isSyncing, hasData, error, lastSync }: Sync
             )}
           </button>
           
-          <div className="text-sm text-gray-600">
+          <div className="text-sm text-gray-600 dark:text-gray-400">
             {hasData ? (
               <span className="flex items-center">
                 <span className="w-2 h-2 bg-green-500 rounded-full mr-2"></span>
                 {lastSync ? `Última sync: ${format(new Date(lastSync), 'dd/MM/yyyy HH:mm')}` : 'Dados disponíveis'}
               </span>
             ) : (
-              <span className="flex items-center text-orange-600">
+              <span className="flex items-center text-orange-600 dark:text-orange-400">
                 <span className="w-2 h-2 bg-orange-500 rounded-full mr-2"></span>
                 Nenhum dado sincronizado
               </span>
@@ -50,11 +66,20 @@ export function SyncButton({ onSync, isSyncing, hasData, error, lastSync }: Sync
           </div>
         </div>
 
-        {error && (
-          <div className="text-sm text-red-600 bg-red-50 px-3 py-1 rounded">
-            {error}
-          </div>
-        )}
+        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+          <DateRangeFilter
+            selectedRange={selectedRange}
+            onRangeChange={onRangeChange}
+            customDateRange={customDateRange}
+            onCustomDateRangeChange={onCustomDateRangeChange}
+          />
+          
+          {error && (
+            <div className="text-sm text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/30 px-3 py-1 rounded">
+              {error}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

@@ -18,10 +18,10 @@ interface SpendOverTimeChartProps {
 export function SpendOverTimeChart({ data, loading }: SpendOverTimeChartProps) {
   if (loading) {
     return (
-      <div className="chart-container">
+      <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 p-6">
         <div className="animate-pulse">
-          <div className="h-6 bg-gray-200 rounded w-1/3 mb-4"></div>
-          <div className="h-80 bg-gray-200 rounded"></div>
+          <div className="h-6 bg-gray-200 dark:bg-gray-700 rounded w-1/3 mb-4"></div>
+          <div className="h-80 bg-gray-200 dark:bg-gray-700 rounded"></div>
         </div>
       </div>
     );
@@ -29,9 +29,9 @@ export function SpendOverTimeChart({ data, loading }: SpendOverTimeChartProps) {
 
   if (!data?.daily.length) {
     return (
-      <div className="chart-container">
-        <h3 className="text-lg font-semibold text-gray-800 mb-4">Gasto ao Longo do Tempo</h3>
-        <div className="h-80 flex items-center justify-center text-gray-500">
+      <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 p-6">
+        <h3 className="text-lg font-semibold text-gray-800 dark:text-white mb-4">Gasto ao Longo do Tempo</h3>
+        <div className="h-80 flex items-center justify-center text-gray-500 dark:text-gray-400">
           Nenhum dado disponível para o período selecionado
         </div>
       </div>
@@ -54,15 +54,15 @@ export function SpendOverTimeChart({ data, loading }: SpendOverTimeChartProps) {
     if (active && payload && payload.length) {
       const chartPayload = payload[0];
       return (
-        <div className="bg-white p-3 border border-gray-200 rounded-lg shadow-lg">
-          <p className="font-semibold text-gray-800">{chartPayload.payload.fullDate}</p>
-          <p className="text-primary-600">
+        <div className="bg-white dark:bg-slate-800 p-3 border border-gray-200 dark:border-slate-700 rounded-lg shadow-lg">
+          <p className="font-semibold text-gray-800 dark:text-white">{chartPayload.payload.fullDate}</p>
+          <p className="text-primary-600 dark:text-primary-400">
             {formatCurrency(chartPayload.payload.USD)} ({formatCurrencyBrl(chartPayload.payload.BRL)})
           </p>
-          <p className="text-gray-500 text-sm">
+          <p className="text-gray-500 dark:text-gray-400 text-sm">
             Requests: {chartPayload.payload.Requests.toLocaleString()}
           </p>
-          <p className="text-gray-500 text-sm">
+          <p className="text-gray-500 dark:text-gray-400 text-sm">
             Tokens: {chartPayload.payload.Tokens.toLocaleString()}
           </p>
         </div>
@@ -72,11 +72,11 @@ export function SpendOverTimeChart({ data, loading }: SpendOverTimeChartProps) {
   };
 
   return (
-    <div className="chart-container">
+    <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 p-6">
       <div className="flex items-center justify-between mb-4">
-        <h3 className="text-lg font-semibold text-gray-800">Gasto ao Longo do Tempo</h3>
-        <div className="text-sm text-gray-500">
-          Total: <span className="font-semibold text-primary-600">{formatCurrency(totalCostUsd)} ({formatCurrencyBrl(totalCostBrl)})</span>
+        <h3 className="text-lg font-semibold text-gray-800 dark:text-white">Gasto ao Longo do Tempo</h3>
+        <div className="text-sm text-gray-500 dark:text-gray-400">
+          Total: <span className="font-semibold text-primary-600 dark:text-primary-400">{formatCurrency(totalCostUsd)} ({formatCurrencyBrl(totalCostBrl)})</span>
         </div>
       </div>
       <ResponsiveContainer width="100%" height={320}>
@@ -87,7 +87,7 @@ export function SpendOverTimeChart({ data, loading }: SpendOverTimeChartProps) {
               <stop offset="95%" stopColor="#0ea5e9" stopOpacity={0} />
             </linearGradient>
           </defs>
-          <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+          <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" className="dark:stroke-slate-700" />
           <XAxis 
             dataKey="date" 
             stroke="#9ca3af"
