@@ -6,7 +6,7 @@ import { fileURLToPath } from 'url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const DB_PATH = process.env.DB_PATH || path.join(__dirname, '../../data/openrouter.db');
+const DB_PATH = process.env.DB_PATH || path.join(process.cwd(), 'data/openrouter.db');
 
 let db: SqlJsDatabase | null = null;
 let dbInitPromise: Promise<SqlJsDatabase> | null = null;
@@ -23,14 +23,19 @@ async function initDatabase(): Promise<SqlJsDatabase> {
   const SQL = await initSqlJs();
   
   const dbDir = path.dirname(DB_PATH);
+  console.log(`[DB] Database directory: ${dbDir}`);
   if (!fs.existsSync(dbDir)) {
+    console.log(`[DB] Creating database directory: ${dbDir}`);
     fs.mkdirSync(dbDir, { recursive: true });
   }
 
+  console.log(`[DB] Database path: ${DB_PATH}`);
   if (fs.existsSync(DB_PATH)) {
+    console.log('[DB] Loading existing database');
     const buffer = fs.readFileSync(DB_PATH);
     db = new SQL.Database(buffer);
   } else {
+    console.log('[DB] Creating new database');
     db = new SQL.Database();
   }
 

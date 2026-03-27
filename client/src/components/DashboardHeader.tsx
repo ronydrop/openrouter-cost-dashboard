@@ -1,6 +1,5 @@
 import { Activity, RefreshCw, AlertCircle, CheckCircle } from 'lucide-react';
 import { useHealthCheck } from '../hooks/useDashboard';
-import { CurrencySelector } from './CurrencySelector';
 import { DateRangeFilter } from './DateRangeFilter';
 import type { DateRange } from '../types';
 
@@ -9,8 +8,6 @@ interface DashboardHeaderProps {
   onRangeChange: (range: DateRange) => void;
   customDateRange?: { start: string; end: string };
   onCustomDateRangeChange?: (range: { start: string; end: string }) => void;
-  currency: 'USD' | 'BRL';
-  onCurrencyChange: (currency: 'USD' | 'BRL') => void;
   onRefresh: () => void;
   isRefreshing: boolean;
 }
@@ -20,8 +17,6 @@ export function DashboardHeader({
   onRangeChange,
   customDateRange,
   onCustomDateRangeChange,
-  currency,
-  onCurrencyChange,
   onRefresh,
   isRefreshing,
 }: DashboardHeaderProps) {
@@ -66,11 +61,6 @@ export function DashboardHeader({
             />
             
             <div className="flex items-center gap-3">
-              <CurrencySelector
-                currency={currency}
-                onCurrencyChange={onCurrencyChange}
-              />
-              
               <button
                 onClick={onRefresh}
                 disabled={isRefreshing}

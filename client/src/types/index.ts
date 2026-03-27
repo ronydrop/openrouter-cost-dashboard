@@ -97,6 +97,7 @@ export interface DashboardSummary {
   avgCostPerRequest: number;
   avgResponseTime: number;
   successRate: number;
+  latestDataDate?: string;
   exchangeRate: number;
   exchangeRateSource: string;
   exchangeRateMode: 'auto' | 'manual';

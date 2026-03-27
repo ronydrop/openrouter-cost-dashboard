@@ -16,7 +16,6 @@ function Dashboard() {
   const queryClientContext = useQueryClient();
   const [selectedRange, setSelectedRange] = useState<DateRange>('last30days');
   const [customDateRange, setCustomDateRange] = useState({ start: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(), end: new Date().toISOString() });
-  const [currency, setCurrency] = useState<'USD' | 'BRL'>('USD');
   const [syncError, setSyncError] = useState<string | null>(null);
   const [hasData, setHasData] = useState(false);
 
@@ -88,7 +87,8 @@ function Dashboard() {
   // Provider chart data
   const providerChartData = providerMetrics?.map((p, i) => ({
     name: p.provider,
-    value: currency === 'BRL' ? p.totalCostBrl : p.totalCostUsd,
+    value: p.totalCostUsd,
+    valueBrl: p.totalCostBrl,
     percent: p.percentOfTotal * 100,
     color: COLORS[i % COLORS.length],
   })) || [];
@@ -96,18 +96,19 @@ function Dashboard() {
   // API Key chart data
   const apiKeyChartData = apiKeyMetrics?.map((k, i) => ({
     name: k.api_key_name,
-    value: currency === 'BRL' ? k.totalCostBrl : k.totalCostUsd,
+    value: k.totalCostUsd,
+    valueBrl: k.totalCostBrl,
     percent: k.percentOfTotal * 100,
     color: COLORS[i % COLORS.length],
   })) || [];
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <DashboardHeader selectedRange={selectedRange} onRangeChange={handleRangeChange} customDateRange={customDateRange} onCustomDateRangeChange={setCustomDateRange} currency={currency} onCurrencyChange={setCurrency} onRefresh={handleRefresh} isRefreshing={isRefreshing} />
+      <DashboardHeader selectedRange={selectedRange} onRangeChange={handleRangeChange} customDateRange={customDateRange} onCustomDateRangeChange={setCustomDateRange} onRefresh={handleRefresh} isRefreshing={isRefreshing} />
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <section className="mb-6"><SyncButton onSync={handleSync} isSyncing={syncMutation.isPending} hasData={hasData} error={syncError} /></section>
         <section className="mb-8"><SummaryCards data={summary} loading={summaryLoading} /></section>
-        <section className="mb-8"><SpendOverTimeChart data={timeSeries} loading={timeSeriesLoading} currency={currency} /></section>
+        <section className="mb-8"><SpendOverTimeChart data={timeSeries} loading={timeSeriesLoading} /></section>
         
         {/* Provider Chart */}
         <section className="mb-8">
@@ -123,16 +124,22 @@ function Dashboard() {
                       <Pie data={providerChartData} cx="50%" cy="50%" innerRadius={50} outerRadius={80} paddingAngle={2} dataKey="value" label={({ name, percent }) => `${name} (${percent.toFixed(1)}%)`}>
                         {providerChartData.map((entry, index) => <Cell key={`cell-${index}`} fill={entry.color} />)}
                       </Pie>
-                      <Tooltip formatter={(value: number) => [currency === 'BRL' ? `R$ ${value.toFixed(2)}` : `$${value.toFixed(4)}`, 'Custo']} />
+                      <Tooltip formatter={(value: number, _name: string, props: { payload?: { valueBrl?: number } }) => {
+                        const brl = props.payload?.valueBrl ?? value;
+                        return [`$ ${value.toFixed(2)} (R$ ${brl.toFixed(2)})`, 'Custo'];
+                      }} />
                     </PieChart>
                   </ResponsiveContainer>
                 </div>
                 <div className="h-64">
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={providerChartData} layout="vertical">
-                      <XAxis type="number" tickFormatter={(v) => currency === 'BRL' ? `R$ ${v.toFixed(0)}` : `$${v.toFixed(2)}`} />
+                      <XAxis type="number" tickFormatter={(v) => `$ ${v.toFixed(2)}`} />
                       <YAxis type="category" dataKey="name" width={80} />
-                      <Tooltip formatter={(value: number) => [currency === 'BRL' ? `R$ ${value.toFixed(2)}` : `$${value.toFixed(4)}`, 'Custo']} />
+                      <Tooltip formatter={(value: number, _name: string, props: { payload?: { valueBrl?: number } }) => {
+                        const brl = props.payload?.valueBrl ?? value;
+                        return [`$ ${value.toFixed(2)} (R$ ${brl.toFixed(2)})`, 'Custo'];
+                      }} />
                       <Bar dataKey="value" radius={[0, 4, 4, 0]}>
                         {providerChartData.map((entry, index) => <Cell key={`cell-${index}`} fill={entry.color} />)}
                       </Bar>
@@ -160,16 +167,22 @@ function Dashboard() {
                       <Pie data={apiKeyChartData} cx="50%" cy="50%" innerRadius={50} outerRadius={80} paddingAngle={2} dataKey="value" label={({ name, percent }) => `${name} (${percent.toFixed(1)}%)`}>
                         {apiKeyChartData.map((entry, index) => <Cell key={`cell-${index}`} fill={entry.color} />)}
                       </Pie>
-                      <Tooltip formatter={(value: number) => [currency === 'BRL' ? `R$ ${value.toFixed(2)}` : `$${value.toFixed(4)}`, 'Custo']} />
+                      <Tooltip formatter={(value: number, _name: string, props: { payload?: { valueBrl?: number } }) => {
+                        const brl = props.payload?.valueBrl ?? value;
+                        return [`$ ${value.toFixed(2)} (R$ ${brl.toFixed(2)})`, 'Custo'];
+                      }} />
                     </PieChart>
                   </ResponsiveContainer>
                 </div>
                 <div className="h-64">
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={apiKeyChartData} layout="vertical">
-                      <XAxis type="number" tickFormatter={(v) => currency === 'BRL' ? `R$ ${v.toFixed(0)}` : `$${v.toFixed(2)}`} />
+                      <XAxis type="number" tickFormatter={(v) => `$ ${v.toFixed(2)}`} />
                       <YAxis type="category" dataKey="name" width={100} />
-                      <Tooltip formatter={(value: number) => [currency === 'BRL' ? `R$ ${value.toFixed(2)}` : `$${value.toFixed(4)}`, 'Custo']} />
+                      <Tooltip formatter={(value: number, _name: string, props: { payload?: { valueBrl?: number } }) => {
+                        const brl = props.payload?.valueBrl ?? value;
+                        return [`$ ${value.toFixed(2)} (R$ ${brl.toFixed(2)})`, 'Custo'];
+                      }} />
                       <Bar dataKey="value" radius={[0, 4, 4, 0]}>
                         {apiKeyChartData.map((entry, index) => <Cell key={`cell-${index}`} fill={entry.color} />)}
                       </Bar>
@@ -219,7 +232,7 @@ function Dashboard() {
         )}
 
         {/* Model Chart */}
-        <section className="mb-8"><SpendByModelChart data={modelMetrics} loading={modelMetricsLoading} currency={currency} /></section>
+        <section className="mb-8"><SpendByModelChart data={modelMetrics} loading={modelMetricsLoading} /></section>
         <section className="mb-8"><InsightCard insights={insights} loading={insightsLoading} /></section>
         <section className="mb-8"><h2 className="text-xl font-bold text-gray-900 mb-4">Detalhes por Modelo</h2><ModelCostTable data={modelMetrics} loading={modelMetricsLoading} /></section>
         

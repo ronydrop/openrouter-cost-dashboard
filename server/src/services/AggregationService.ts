@@ -28,52 +28,59 @@ export class AggregationService {
     const cacheKey = getDashboardCacheKey('summary', rangeStr);
 
     return withCache(cacheKey, async () => {
+      // Buscar TODOS os dados dos últimos 30 dias para calcular today/7d/30d
+      const allRange30 = parseRange('last30days');
       const activities = await this.getActivitiesForRange(range);
+      const all30Activities = rangeStr === 'last30days' ? activities : await this.getActivitiesForRange(allRange30);
       const currencyInfo = await getExchangeRate();
       const rate = currencyInfo.rate;
 
-      const today = dayjs().format('YYYY-MM-DD');
-      const sevenDaysAgo = dayjs().subtract(7, 'day').format('YYYY-MM-DD');
-      const thirtyDaysAgo = dayjs().subtract(30, 'day').format('YYYY-MM-DD');
+      // O /activity da OpenRouter retorna dados diários agregados por UTC.
+      // Dados do dia atual (hoje) só aparecem no dia seguinte.
+      // Usamos o dia mais recente disponível no banco como referência de "hoje".
+      const allDates = activities
+        .map(a => dayjs(a.timestamp).utc().format('YYYY-MM-DD'))
+        .filter(Boolean);
+
+      const latestDataDate = allDates.length > 0
+        ? allDates.reduce((a, b) => a > b ? a : b)
+        : dayjs().utc().format('YYYY-MM-DD');
+
+      const sevenDaysBack = dayjs(latestDataDate).subtract(6, 'day').format('YYYY-MM-DD');
+      const thirtyDaysBack = dayjs(latestDataDate).subtract(29, 'day').format('YYYY-MM-DD');
 
       let totalCostUsd = 0, todayCostUsd = 0, last7DaysCostUsd = 0, last30DaysCostUsd = 0;
       let totalRequests = 0, totalTokens = 0;
-      let totalResponseTime = 0, successCount = 0;
       const daysWithData = new Set<string>();
 
       for (const activity of activities) {
-        const date = dayjs(activity.timestamp).format('YYYY-MM-DD');
+        if (activity.costUsd <= 0) continue; // ignorar entradas sem custo real
+        const date = dayjs(activity.timestamp).utc().format('YYYY-MM-DD');
         totalCostUsd += activity.costUsd;
         totalRequests += activity.requests;
         totalTokens += activity.totalTokens;
         daysWithData.add(date);
-        
-        if (date === today) todayCostUsd += activity.costUsd;
-        if (date >= sevenDaysAgo) last7DaysCostUsd += activity.costUsd;
-        if (date >= thirtyDaysAgo) last30DaysCostUsd += activity.costUsd;
-        
-        if (activity.responseTimeMs) {
-          totalResponseTime += activity.responseTimeMs;
-          successCount++;
-        }
+
+        // "hoje" = dia mais recente com dados disponíveis
+        if (date === latestDataDate) todayCostUsd += activity.costUsd;
+        if (date >= sevenDaysBack) last7DaysCostUsd += activity.costUsd;
+        if (date >= thirtyDaysBack) last30DaysCostUsd += activity.costUsd;
       }
 
       const credits = await activityRepository.getLatestCreditSnapshot() || {
-        total_credits: 100, used_credits: 0, remaining_credits: 100,
+        total_credits: 0, used_credits: 0, remaining_credits: 0,
       };
 
       const numDays = daysWithData.size || 1;
       const avgDailyCostUsd = totalCostUsd / numDays;
       const avgCostPerRequest = totalRequests > 0 ? totalCostUsd / totalRequests : 0;
-      const avgResponseTime = successCount > 0 ? totalResponseTime / successCount : 0;
-      const successRate = activities.length > 0 ? successCount / activities.length : 1;
 
       return {
         totalCostUsd: parseFloat(totalCostUsd.toFixed(4)),
         totalCostBrl: parseFloat(convertToBrl(totalCostUsd, rate).toFixed(2)),
-        totalCredits: credits.total_credits,
-        usedCredits: credits.used_credits,
-        remainingCredits: credits.remaining_credits,
+        totalCredits: this.n(credits.total_credits),
+        usedCredits: this.n(credits.used_credits),
+        remainingCredits: this.n(credits.remaining_credits),
         todayCostUsd: parseFloat(todayCostUsd.toFixed(4)),
         todayCostBrl: parseFloat(convertToBrl(todayCostUsd, rate).toFixed(2)),
         last7DaysCostUsd: parseFloat(last7DaysCostUsd.toFixed(4)),
@@ -85,13 +92,19 @@ export class AggregationService {
         totalRequests,
         totalTokens,
         avgCostPerRequest: parseFloat(avgCostPerRequest.toFixed(6)),
-        avgResponseTime: parseFloat(avgResponseTime.toFixed(0)),
-        successRate: parseFloat(successRate.toFixed(4)),
+        avgResponseTime: 0,
+        successRate: 1,
+        latestDataDate,
         exchangeRate: rate,
         exchangeRateSource: currencyInfo.source,
         exchangeRateMode: currencyInfo.mode,
       };
     });
+  }
+
+  private n(val: any): number {
+    const v = parseFloat(val);
+    return isNaN(v) ? 0 : v;
   }
 
   // ============ TIME SERIES ============
@@ -225,6 +238,7 @@ export class AggregationService {
       let totalCost = 0;
 
       for (const activity of activities) {
+        if (activity.costUsd <= 0) continue; // somente modelos com custo real
         totalCost += activity.costUsd;
         if (!modelMap.has(activity.model)) {
           modelMap.set(activity.model, {
@@ -245,7 +259,7 @@ export class AggregationService {
             percentOfTotal: 0,
           });
         }
-        
+
         const model = modelMap.get(activity.model)!;
         model.totalCostUsd += activity.costUsd;
         model.totalCostBrl += convertToBrl(activity.costUsd, rate);
@@ -257,11 +271,13 @@ export class AggregationService {
         model.totalTokens += activity.totalTokens;
       }
 
-      return Array.from(modelMap.values()).map(model => {
+      return Array.from(modelMap.values())
+        .filter(m => m.totalCostUsd > 0.0001)
+        .map(model => {
         const avgCostPerRequest = model.totalRequests > 0 ? model.totalCostUsd / model.totalRequests : 0;
         const avgCostPerToken = model.totalTokens > 0 ? model.totalCostUsd / model.totalTokens : 0;
         const percentOfTotal = totalCost > 0 ? model.totalCostUsd / totalCost : 0;
-        
+
         return {
           ...model,
           totalCostUsd: parseFloat(model.totalCostUsd.toFixed(4)),
@@ -270,7 +286,8 @@ export class AggregationService {
           avgCostPerToken: parseFloat(avgCostPerToken.toFixed(8)),
           percentOfTotal: parseFloat(percentOfTotal.toFixed(4)),
         };
-      }).sort((a, b) => b.totalCostUsd - a.totalCostUsd);
+      })
+      .sort((a, b) => b.totalCostUsd - a.totalCostUsd);
     });
   }
 
@@ -288,9 +305,10 @@ export class AggregationService {
       let totalCost = 0;
 
       for (const activity of activities) {
+        if (activity.costUsd <= 0) continue; // somente com custo real
         const provider = activity.provider || 'unknown';
         totalCost += activity.costUsd;
-        
+
         if (!providerMap.has(provider)) {
           providerMap.set(provider, {
             provider,
@@ -302,7 +320,7 @@ export class AggregationService {
             percentOfTotal: 0,
           });
         }
-        
+
         const p = providerMap.get(provider)!;
         p.totalCostUsd += activity.costUsd;
         p.totalCostBrl += convertToBrl(activity.costUsd, rate);
@@ -310,65 +328,78 @@ export class AggregationService {
         p.totalTokens += activity.totalTokens;
       }
 
-      return Array.from(providerMap.values()).map(p => ({
-        ...p,
-        totalCostUsd: parseFloat(p.totalCostUsd.toFixed(4)),
-        totalCostBrl: parseFloat(p.totalCostBrl.toFixed(2)),
-        avgCostPerRequest: parseFloat((p.totalRequests > 0 ? p.totalCostUsd / p.totalRequests : 0).toFixed(6)),
-        percentOfTotal: parseFloat((totalCost > 0 ? p.totalCostUsd / totalCost : 0).toFixed(4)),
-      })).sort((a, b) => b.totalCostUsd - a.totalCostUsd);
+      // Ordenar e manter top 8 — agregar restantes em "Outros"
+      const TOP_N = 8;
+      const sorted = Array.from(providerMap.values())
+        .filter(p => p.totalCostUsd > 0.0001)
+        .map(p => ({
+          ...p,
+          totalCostUsd: parseFloat(p.totalCostUsd.toFixed(4)),
+          totalCostBrl: parseFloat(p.totalCostBrl.toFixed(2)),
+          avgCostPerRequest: parseFloat((p.totalRequests > 0 ? p.totalCostUsd / p.totalRequests : 0).toFixed(6)),
+          percentOfTotal: parseFloat((totalCost > 0 ? p.totalCostUsd / totalCost : 0).toFixed(4)),
+        }))
+        .sort((a, b) => b.totalCostUsd - a.totalCostUsd);
+
+      if (sorted.length <= TOP_N) return sorted;
+
+      const top = sorted.slice(0, TOP_N);
+      const others = sorted.slice(TOP_N);
+      const othersCost = others.reduce((s, p) => s + p.totalCostUsd, 0);
+      const othersBrl = others.reduce((s, p) => s + p.totalCostBrl, 0);
+      const othersReq = others.reduce((s, p) => s + p.totalRequests, 0);
+      const othersTokens = others.reduce((s, p) => s + p.totalTokens, 0);
+
+      if (othersCost > 0.0001) {
+        top.push({
+          provider: `Outros (${others.length})`,
+          totalCostUsd: parseFloat(othersCost.toFixed(4)),
+          totalCostBrl: parseFloat(othersBrl.toFixed(2)),
+          totalRequests: othersReq,
+          totalTokens: othersTokens,
+          avgCostPerRequest: parseFloat((othersReq > 0 ? othersCost / othersReq : 0).toFixed(6)),
+          percentOfTotal: parseFloat((totalCost > 0 ? othersCost / totalCost : 0).toFixed(4)),
+        });
+      }
+
+      return top;
     });
   }
 
   // ============ API KEY METRICS ============
   async buildApiKeyMetrics(rangeStr: string = 'last30days'): Promise<{ data: ApiKeyMetrics[]; cached: boolean }> {
-    const range = parseRange(rangeStr);
     const cacheKey = getDashboardCacheKey('apikeys', rangeStr);
 
     return withCache(cacheKey, async () => {
-      const activities = await this.getActivitiesForRange(range);
+      // Usar dados diretos da tabela api_keys (sincronizados do /keys endpoint)
       const currencyInfo = await getExchangeRate();
       const rate = currencyInfo.rate;
 
-      const keyMap = new Map<string, ApiKeyMetrics>();
-      let totalCost = 0;
+      const rawKeys = await activityRepository.getAllApiKeys();
 
-      for (const activity of activities) {
-        const keyName = activity.apiKeyName || 'default';
-        totalCost += activity.costUsd;
-        
-        if (!keyMap.has(keyName)) {
-          keyMap.set(keyName, {
-            api_key_name: keyName,
-            totalCostUsd: 0,
-            totalCostBrl: 0,
-            totalRequests: 0,
-            totalTokens: 0,
-            avgCostPerRequest: 0,
-            percentOfTotal: 0,
-            lastUsed: null,
-          });
-        }
-        
-        const k = keyMap.get(keyName)!;
-        k.totalCostUsd += activity.costUsd;
-        k.totalCostBrl += convertToBrl(activity.costUsd, rate);
-        k.totalRequests += activity.requests;
-        k.totalTokens += activity.totalTokens;
-        
-        const activityTime = dayjs(activity.timestamp);
-        if (!k.lastUsed || activityTime.isAfter(dayjs(k.lastUsed))) {
-          k.lastUsed = activity.timestamp;
-        }
+      if (rawKeys.length === 0) {
+        return [];
       }
 
-      return Array.from(keyMap.values()).map(k => ({
-        ...k,
-        totalCostUsd: parseFloat(k.totalCostUsd.toFixed(4)),
-        totalCostBrl: parseFloat(k.totalCostBrl.toFixed(2)),
-        avgCostPerRequest: parseFloat((k.totalRequests > 0 ? k.totalCostUsd / k.totalRequests : 0).toFixed(6)),
-        percentOfTotal: parseFloat((totalCost > 0 ? k.totalCostUsd / totalCost : 0).toFixed(4)),
-      })).sort((a, b) => b.totalCostUsd - a.totalCostUsd);
+      const totalCost = rawKeys.reduce((s: number, k: any) => s + this.n(k.total_cost), 0);
+
+      return rawKeys
+        .filter((k: any) => this.n(k.total_cost) > 0.0001)
+        .map((k: any) => {
+          const costUsd = this.n(k.total_cost);
+          const requests = this.n(k.total_requests);
+          return {
+            api_key_name: k.key_name || 'Unknown',
+            totalCostUsd: parseFloat(costUsd.toFixed(4)),
+            totalCostBrl: parseFloat(convertToBrl(costUsd, rate).toFixed(2)),
+            totalRequests: requests,
+            totalTokens: this.n(k.total_tokens),
+            avgCostPerRequest: parseFloat((requests > 0 ? costUsd / requests : 0).toFixed(6)),
+            percentOfTotal: parseFloat((totalCost > 0 ? costUsd / totalCost : 0).toFixed(4)),
+            lastUsed: k.last_used || null,
+          };
+        })
+        .sort((a: ApiKeyMetrics, b: ApiKeyMetrics) => b.totalCostUsd - a.totalCostUsd);
     });
   }
 

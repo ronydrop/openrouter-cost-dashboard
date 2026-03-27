@@ -28,90 +28,128 @@ export function SummaryCards({ data, loading }: SummaryCardsProps) {
     );
   }
 
-  // Calcular saldo restante em vez de mostrar usado
-  const remainingCreditsBrl = data.remainingCredits * data.exchangeRate;
-  const usedCreditsPercent = data.totalCredits > 0 
-    ? (data.usedCredits / data.totalCredits * 100).toFixed(1) 
+  const usedPercent = data.totalCredits > 0
+    ? ((data.usedCredits / data.totalCredits) * 100).toFixed(1)
     : '0';
 
-  const cards = [
-    {
-      label: 'Créditos Totais',
-      value: formatCurrency(data.totalCredits, 'USD'),
-      subValue: `Saldo: ${formatCurrency(data.remainingCredits, 'USD')} (${remainingCreditsBrl.toFixed(2)} BRL)`,
-      icon: '💰',
-      highlight: true,
-    },
-    {
-      label: 'Créditos Usados',
-      value: formatCurrency(data.usedCredits, 'USD'),
-      subValue: `${usedCreditsPercent}% do total`,
-      icon: '💸',
-      highlight: false,
-    },
-    {
-      label: 'Cotação USD/BRL',
-      value: `R$ ${data.exchangeRate.toFixed(4)}`,
-      subValue: `${data.exchangeRateMode === 'auto' ? 'Automática' : 'Manual'} • ${data.exchangeRateSource}`,
-      icon: '💱',
-      highlight: false,
-    },
-    {
-      label: 'Gasto Hoje',
-      value: formatCurrency(data.todayCostUsd, 'USD'),
-      subValue: formatCurrency(data.todayCostBrl, 'BRL'),
-      icon: '📅',
-      highlight: false,
-    },
-    {
-      label: 'Últimos 7 dias',
-      value: formatCurrency(data.last7DaysCostUsd, 'USD'),
-      subValue: formatCurrency(data.last7DaysCostBrl, 'BRL'),
-      icon: '📊',
-      highlight: false,
-    },
-    {
-      label: 'Últimos 30 dias',
-      value: formatCurrency(data.last30DaysCostUsd, 'USD'),
-      subValue: formatCurrency(data.last30DaysCostBrl, 'BRL'),
-      icon: '📈',
-      highlight: false,
-    },
-    {
-      label: 'Média Diária',
-      value: formatCurrency(data.avgDailyCostUsd, 'USD'),
-      subValue: formatCurrency(data.avgDailyCostBrl, 'BRL'),
-      icon: '📉',
-      highlight: false,
-    },
-    {
-      label: 'Total Requests',
-      value: formatNumber(data.totalRequests),
-      subValue: `${formatNumber(data.totalTokens)} tokens`,
-      icon: '🔄',
-      highlight: false,
-    },
-  ];
+  const remainingPercent = data.totalCredits > 0
+    ? ((data.remainingCredits / data.totalCredits) * 100).toFixed(1)
+    : '0';
+
+  const remainingBrl = (data.remainingCredits * data.exchangeRate).toFixed(2);
+  const isCritical = parseFloat(remainingPercent) < 10;
+  const isWarning = parseFloat(remainingPercent) < 25;
+
+  // "Hoje" no OpenRouter = último dia disponível (dados chegam com 1 dia de delay)
+  const latestLabel = data.latestDataDate
+    ? `Último dado: ${new Date(data.latestDataDate + 'T12:00:00Z').toLocaleDateString('pt-BR')}`
+    : 'Último dia disponível';
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-      {cards.map((card, index) => (
-        <div 
-          key={index} 
-          className={`stat-card ${card.highlight ? 'bg-gradient-to-br from-primary-50 to-blue-50 border-primary-200' : ''}`}
-        >
+    <div className="space-y-4">
+      {/* Row 1: Créditos em destaque */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        {/* Card saldo — destaque principal */}
+        <div className={`stat-card border-2 ${
+          isCritical
+            ? 'border-red-400 bg-gradient-to-br from-red-50 to-red-100'
+            : isWarning
+            ? 'border-yellow-400 bg-gradient-to-br from-yellow-50 to-amber-50'
+            : 'border-green-400 bg-gradient-to-br from-green-50 to-emerald-50'
+        }`}>
           <div className="flex items-center justify-between">
-            <span className="text-2xl">{card.icon}</span>
+            <span className="text-sm font-semibold text-gray-500 uppercase tracking-wide">Saldo Disponível</span>
+            <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${
+              isCritical ? 'bg-red-200 text-red-700' :
+              isWarning  ? 'bg-yellow-200 text-yellow-700' :
+                           'bg-green-200 text-green-700'
+            }`}>
+              {remainingPercent}% restante
+            </span>
           </div>
-          <div className="mt-2">
-            <p className="stat-card-label">{card.label}</p>
-            <p className={`stat-card-value ${card.highlight ? 'text-primary-700' : ''}`}>
-              {card.value}
-            </p>
-            <p className="text-xs text-gray-500 mt-1">{card.subValue}</p>
+          <p className={`text-3xl font-bold mt-1 ${
+            isCritical ? 'text-red-700' : isWarning ? 'text-yellow-700' : 'text-green-700'
+          }`}>
+            {formatCurrency(data.remainingCredits, 'USD')}
+          </p>
+          <p className="text-sm text-gray-500 mt-1">≈ R$ {remainingBrl}</p>
+          {/* Barra de progresso */}
+          <div className="mt-3 w-full bg-gray-200 rounded-full h-2">
+            <div
+              className={`h-2 rounded-full transition-all ${
+                isCritical ? 'bg-red-500' : isWarning ? 'bg-yellow-500' : 'bg-green-500'
+              }`}
+              style={{ width: `${Math.min(parseFloat(remainingPercent), 100)}%` }}
+            />
           </div>
+          <p className="text-xs text-gray-400 mt-1">
+            {formatCurrency(data.usedCredits, 'USD')} usados de {formatCurrency(data.totalCredits, 'USD')} ({usedPercent}%)
+          </p>
         </div>
-      ))}
+
+        {/* Card gasto no último dia disponível */}
+        <div className="stat-card">
+          <div className="flex items-center justify-between">
+            <span className="text-sm font-semibold text-gray-500 uppercase tracking-wide">
+              Último dia disponível
+            </span>
+            <span className="text-xs text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full">
+              {latestLabel.replace('Último dado: ', '')}
+            </span>
+          </div>
+          <p className="text-3xl font-bold text-gray-900 mt-1">
+            {formatCurrency(data.todayCostUsd, 'USD')}
+          </p>
+          <p className="text-sm text-gray-500 mt-1">{formatCurrency(data.todayCostBrl, 'BRL')}</p>
+          <p className="text-xs text-gray-400 mt-2">
+            Dados OpenRouter têm 1 dia de defasagem
+          </p>
+        </div>
+
+        {/* Cotação */}
+        <div className="stat-card">
+          <div className="flex items-center justify-between">
+            <span className="text-sm font-semibold text-gray-500 uppercase tracking-wide">Cotação USD/BRL</span>
+            <span className={`text-xs px-2 py-0.5 rounded-full ${
+              data.exchangeRateMode === 'auto'
+                ? 'bg-blue-100 text-blue-700'
+                : 'bg-purple-100 text-purple-700'
+            }`}>
+              {data.exchangeRateMode === 'auto' ? 'Automática' : 'Manual'}
+            </span>
+          </div>
+          <p className="text-3xl font-bold text-gray-900 mt-1">
+            R$ {data.exchangeRate.toFixed(2)}
+          </p>
+          <p className="text-sm text-gray-500 mt-1">{data.exchangeRateSource}</p>
+        </div>
+      </div>
+
+      {/* Row 2: Métricas de custo */}
+      <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="stat-card">
+          <p className="stat-card-label">Últimos 7 dias</p>
+          <p className="stat-card-value">{formatCurrency(data.last7DaysCostUsd, 'USD')}</p>
+          <p className="text-xs text-gray-500 mt-1">{formatCurrency(data.last7DaysCostBrl, 'BRL')}</p>
+        </div>
+        <div className="stat-card">
+          <p className="stat-card-label">Últimos 30 dias</p>
+          <p className="stat-card-value">{formatCurrency(data.last30DaysCostUsd, 'USD')}</p>
+          <p className="text-xs text-gray-500 mt-1">{formatCurrency(data.last30DaysCostBrl, 'BRL')}</p>
+        </div>
+        <div className="stat-card">
+          <p className="stat-card-label">Média Diária</p>
+          <p className="stat-card-value">{formatCurrency(data.avgDailyCostUsd, 'USD')}</p>
+          <p className="text-xs text-gray-500 mt-1">{formatCurrency(data.avgDailyCostBrl, 'BRL')}</p>
+        </div>
+        <div className="stat-card">
+          <p className="stat-card-label">Total Requests</p>
+          <p className="stat-card-value">{formatNumber(data.totalRequests)}</p>
+          <p className="text-xs text-gray-500 mt-1">
+            {formatNumber(data.totalTokens)} tokens • {formatCurrency(data.avgCostPerRequest, 'USD')}/req
+          </p>
+        </div>
+      </div>
     </div>
   );
 }

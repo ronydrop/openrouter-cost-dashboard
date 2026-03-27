@@ -1,0 +1,64 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: openrouter-postgres
+    restart: "no"
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres123
+      POSTGRES_DB: openrouter_dashboard
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./server/src/database/migrations/001_initial_schema.sql:/docker-entrypoint-initdb.d/001_initial_schema.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d openrouter_dashboard"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    image: node:20-alpine
+    container_name: openrouter-backend
+    restart: "no"
+    working_dir: /app
+    command: sh -c "npm install && npm run dev"
+    ports:
+      - "3001:3001"
+    environment:
+      NODE_ENV: development
+      PORT: "3001"
+      DATABASE_URL: postgresql://postgres:postgres123@postgres:5432/openrouter_dashboard
+      OPENROUTER_API_KEY: ${OPENROUTER_API_KEY}
+      CACHE_TTL: "300"
+      TIMEZONE: America/Sao_Paulo
+      EXCHANGE_RATE_API_URL: https://api.exchangerate-api.com/v4/latest/USD
+      FALLBACK_USD_BRL_RATE: "5.00"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ./server:/app
+      - backend_modules:/app/node_modules
+
+  frontend:
+    image: node:20-alpine
+    container_name: openrouter-frontend
+    restart: "no"
+    working_dir: /app
+    command: sh -c "npm install && npm run dev"
+    ports:
+      - "5173:5173"
+    environment:
+      VITE_BACKEND_URL: http://backend:3001
+    depends_on:
+      - backend
+    volumes:
+      - ./client:/app
+      - frontend_modules:/app/node_modules
+
+volumes:
+  postgres_data:
+  backend_modules:
+  frontend_modules:

@@ -1,17 +1,33 @@
 import dayjs from 'dayjs';
 
-export const formatCurrency = (value: number, currency: 'USD' | 'BRL' = 'USD'): string => {
-  return new Intl.NumberFormat(currency === 'USD' ? 'en-US' : 'pt-BR', {
-    style: 'currency',
-    currency,
+export const formatCurrency = (value: number | undefined | null, _currency: 'USD' | 'BRL' = 'USD'): string => {
+  const v = typeof value === 'number' && isFinite(value) ? value : 0;
+  const formatted = new Intl.NumberFormat('pt-BR', {
     minimumFractionDigits: 2,
-    maximumFractionDigits: 4,
-  }).format(value);
+    maximumFractionDigits: 2,
+  }).format(v);
+  return `$ ${formatted}`;
 };
 
-export const formatNumber = (value: number): string => {
-  return new Intl.NumberFormat('pt-BR').format(value);
+export const formatCurrencyBrl = (value: number | undefined | null): string => {
+  const v = typeof value === 'number' && isFinite(value) ? value : 0;
+  const formatted = new Intl.NumberFormat('pt-BR', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(v);
+  return `R$ ${formatted}`;
 };
+
+export const formatCurrencyDual = (valueUsd: number | undefined | null, valueBrl: number | undefined | null): string => {
+  return `${formatCurrency(valueUsd)} (${formatCurrencyBrl(valueBrl)})`;
+};
+
+export const formatNumber = (value: number | undefined | null): string => {
+  const v = typeof value === 'number' && isFinite(value) ? value : 0;
+  return new Intl.NumberFormat('pt-BR').format(v);
+};
+
+
 
 export const formatPercent = (value: number): string => {
   return `${(value * 100).toFixed(1)}%`;

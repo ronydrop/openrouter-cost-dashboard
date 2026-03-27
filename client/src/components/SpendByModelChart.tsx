@@ -11,13 +11,12 @@ import {
   Pie,
   Legend,
 } from 'recharts';
-import { formatCurrency, formatPercent } from '../utils/formatters';
+import { formatCurrency, formatCurrencyBrl, formatPercent } from '../utils/formatters';
 import type { ModelMetrics } from '../types';
 
 interface SpendByModelChartProps {
   data: ModelMetrics[] | undefined;
   loading: boolean;
-  currency: 'USD' | 'BRL';
 }
 
 const COLORS = [
@@ -25,7 +24,7 @@ const COLORS = [
   '#6366f1', '#14b8a6', '#f97316', '#84cc16', '#06b6d4',
 ];
 
-export function SpendByModelChart({ data, loading, currency }: SpendByModelChartProps) {
+export function SpendByModelChart({ data, loading }: SpendByModelChartProps) {
   if (loading) {
     return (
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -67,7 +66,8 @@ export function SpendByModelChart({ data, loading, currency }: SpendByModelChart
   const barData = topModels.map((model) => ({
     name: model.model.length > 20 ? model.model.substring(0, 20) + '...' : model.model,
     fullName: model.model,
-    value: currency === 'USD' ? parseFloat(model.totalCostUsd.toFixed(4)) : parseFloat(model.totalCostBrl.toFixed(2)),
+    value: parseFloat(model.totalCostUsd.toFixed(2)),
+    valueBrl: parseFloat(model.totalCostBrl.toFixed(2)),
     percent: model.percentOfTotal,
   }));
 
@@ -75,17 +75,18 @@ export function SpendByModelChart({ data, loading, currency }: SpendByModelChart
     name: model.model.length > 15 ? model.model.substring(0, 15) + '...' : model.model,
     fullName: model.model,
     value: model.totalCostUsd,
+    valueBrl: model.totalCostBrl,
     percent: model.percentOfTotal,
   }));
 
-  const CustomTooltip = ({ active, payload }: { active?: boolean; payload?: Array<{ payload: { fullName: string; value: number; percent: number } }> }) => {
+  const CustomTooltip = ({ active, payload }: { active?: boolean; payload?: Array<{ payload: { fullName: string; value: number; valueBrl: number; percent: number } }> }) => {
     if (active && payload && payload.length) {
       const chartData = payload[0].payload;
       return (
         <div className="bg-white p-3 border border-gray-200 rounded-lg shadow-lg">
           <p className="font-semibold text-gray-800 mb-1">{chartData.fullName}</p>
           <p className="text-primary-600">
-            {currency === 'USD' ? 'USD' : 'BRL'}: {formatCurrency(chartData.value, currency)}
+            {formatCurrency(chartData.value)} ({formatCurrencyBrl(chartData.valueBrl)})
           </p>
           <p className="text-gray-500 text-sm">
             Participação: {formatPercent(chartData.percent)}
@@ -107,7 +108,7 @@ export function SpendByModelChart({ data, loading, currency }: SpendByModelChart
               type="number" 
               stroke="#9ca3af"
               fontSize={11}
-              tickFormatter={(value) => currency === 'USD' ? `$${value.toFixed(2)}` : `R$${value.toFixed(0)}`}
+              tickFormatter={(value) => `$ ${value.toFixed(2)}`}
             />
             <YAxis 
               type="category" 
