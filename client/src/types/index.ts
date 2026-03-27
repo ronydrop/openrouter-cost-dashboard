@@ -1,37 +1,9 @@
-// API Response Types
+// Types for OpenRouter Dashboard
+
 export interface OpenRouterCredits {
   total_credits: number;
   used_credits: number;
   remaining_credits: number;
-}
-
-export interface OpenRouterActivity {
-  data: OpenRouterActivityItem[];
-  has_more: boolean;
-}
-
-export interface OpenRouterActivityItem {
-  id: string;
-  model: string;
-  provider?: string;
-  cost?: number;
-  tokens?: number;
-  prompt_tokens?: number;
-  completion_tokens?: number;
-  requests?: number;
-  date: string;
-}
-
-// Normalized Data Types
-export interface NormalizedActivityItem {
-  timestamp: string;
-  model: string;
-  provider: string;
-  requests: number;
-  promptTokens: number;
-  completionTokens: number;
-  totalTokens: number;
-  costUsd: number;
 }
 
 export interface DailyMetrics {
@@ -59,16 +31,6 @@ export interface ModelMetrics {
   percentOfTotal: number;
 }
 
-export interface ProviderMetrics {
-  provider: string;
-  totalCostUsd: number;
-  totalCostBrl: number;
-  totalRequests: number;
-  totalTokens: number;
-  percentOfTotal: number;
-}
-
-// Dashboard Summary Types
 export interface DashboardSummary {
   totalCostUsd: number;
   totalCostBrl: number;
@@ -90,60 +52,69 @@ export interface DashboardSummary {
   exchangeRateMode: 'auto' | 'manual';
 }
 
-// Time Series Types
 export interface TimeSeriesData {
   daily: DailyMetrics[];
-  weekly: {
-    week: string;
-    startDate: string;
-    endDate: string;
-    totalCostUsd: number;
-    totalCostBrl: number;
-    totalRequests: number;
-    totalTokens: number;
-  }[];
-  monthly: {
-    month: string;
-    totalCostUsd: number;
-    totalCostBrl: number;
-    totalRequests: number;
-    totalTokens: number;
-  }[];
+  weekly: { week: string; startDate: string; endDate: string; totalCostUsd: number; totalCostBrl: number; totalRequests: number; totalTokens: number; }[];
+  monthly: { month: string; totalCostUsd: number; totalCostBrl: number; totalRequests: number; totalTokens: number; }[];
 }
 
-// Insights Types
+export type InsightType = 'model_concentration' | 'trend_change' | 'peak_day' | 'info' | 'warning' | 'critical';
+export type InsightSeverity = 'info' | 'warning' | 'critical';
+
 export interface Insight {
+  id: string;
+  type: InsightType;
+  severity: InsightSeverity;
+  title: string;
+  description: string;
+  meta?: Record<string, any>;
+}
+
+export interface LegacyInsight {
   id: string;
   type: 'info' | 'warning' | 'danger';
   title: string;
   description: string;
   priority: 'high' | 'medium' | 'low';
-  potentialSavings?: {
-    usd: number;
-    brl: number;
-  };
+  potentialSavings?: { usd: number; brl: number; };
 }
 
-// Filter Types
-export type DateRange = 'today' | 'yesterday' | 'last7days' | 'last30days' | 'currentMonth' | 'previousMonth' | 'custom';
-
-export interface DateFilter {
-  range: DateRange;
-  startDate?: string;
-  endDate?: string;
+export interface ApiResponse<T> {
+  data: T;
+  range: { start: string; end: string; label: string; };
+  cached: boolean;
+  timestamp: string;
 }
 
-// API State Types
-export interface ApiState {
-  loading: boolean;
-  error: string | null;
-  data: unknown;
+export interface SyncResponse {
+  success: boolean;
+  records_synced: number;
+  message: string;
+  errors?: string[];
 }
 
-// Currency Types
+export interface SyncStatus {
+  recentSyncs: { id: number; sync_type: string; records_synced: number; status: string; created_at: string; }[];
+  database: { hasData: boolean; totalRecords: number; earliestDate?: string; latestDate?: string; };
+}
+
+export interface DashboardStatus {
+  hasData: boolean;
+  activityCount: number;
+  dataRange?: { earliest: string; latest: string; };
+  cache: { keys: number; hits: number; misses: number; };
+}
+
+export type DateRange = 'today' | 'yesterday' | 'last7days' | 'last30days' | 'last90days' | 'currentMonth' | 'previousMonth' | 'custom';
+
 export interface CurrencyInfo {
   rate: number;
   source: string;
   mode: 'auto' | 'manual';
   lastUpdated: string;
+}
+
+export interface RangeOption {
+  value: string;
+  label: string;
 }

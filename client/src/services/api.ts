@@ -1,12 +1,5 @@
 import axios from 'axios';
-import type {
-  DashboardSummary,
-  TimeSeriesData,
-  ModelMetrics,
-  Insight,
-  CurrencyInfo,
-  OpenRouterCredits,
-} from '../types';
+import type { DashboardSummary, TimeSeriesData, ModelMetrics, Insight, CurrencyInfo, OpenRouterCredits, ApiResponse, SyncResponse, DashboardStatus, RangeOption, SyncStatus } from '../types';
 
 const api = axios.create({
   baseURL: '/api',
@@ -14,13 +7,31 @@ const api = axios.create({
 });
 
 export const apiService = {
-  // Credits
+  async syncData(range: string = 'last30days'): Promise<SyncResponse> {
+    const response = await api.post<SyncResponse>(`/openrouter/sync?range=${range}`);
+    return response.data;
+  },
+
+  async getSyncStatus(): Promise<SyncStatus> {
+    const response = await api.get<SyncStatus>('/openrouter/sync/status');
+    return response.data;
+  },
+
+  async getDashboardStatus(): Promise<DashboardStatus> {
+    const response = await api.get<DashboardStatus>('/dashboard/status');
+    return response.data;
+  },
+
+  async getAvailableRanges(): Promise<{ ranges: RangeOption[] }> {
+    const response = await api.get<{ ranges: RangeOption[] }>('/dashboard/ranges');
+    return response.data;
+  },
+
   async getCredits(): Promise<OpenRouterCredits> {
     const response = await api.get<OpenRouterCredits>('/openrouter/credits');
     return response.data;
   },
 
-  // Exchange Rate
   async getExchangeRate(): Promise<CurrencyInfo> {
     const response = await api.get<CurrencyInfo>('/exchange-rate');
     return response.data;
@@ -31,39 +42,28 @@ export const apiService = {
     return response.data;
   },
 
-  // Dashboard Summary
-  async getDashboardSummary(range: string): Promise<DashboardSummary> {
-    const response = await api.get<DashboardSummary>('/dashboard/summary', {
-      params: { range },
+  async getDashboardSummary(range: string): Promise<ApiResponse<DashboardSummary>> {
+    const response = await api.get<ApiResponse<DashboardSummary>>('/dashboard/summary', { params: { range } });
+    return response.data;
+  },
+
+  async getTimeSeries(range: string, granularity?: string): Promise<ApiResponse<TimeSeriesData>> {
+    const response = await api.get<ApiResponse<TimeSeriesData>>('/dashboard/timeseries', {
+      params: { range, granularity },
     });
     return response.data;
   },
 
-  // Time Series
-  async getTimeSeries(range: string): Promise<TimeSeriesData> {
-    const response = await api.get<TimeSeriesData>('/dashboard/timeseries', {
-      params: { range },
-    });
+  async getModelMetrics(range: string): Promise<ApiResponse<ModelMetrics[]>> {
+    const response = await api.get<ApiResponse<ModelMetrics[]>>('/dashboard/models', { params: { range } });
     return response.data;
   },
 
-  // Model Metrics
-  async getModelMetrics(range: string): Promise<ModelMetrics[]> {
-    const response = await api.get<ModelMetrics[]>('/dashboard/models', {
-      params: { range },
-    });
+  async getInsights(range: string): Promise<ApiResponse<Insight[]>> {
+    const response = await api.get<ApiResponse<Insight[]>>('/dashboard/insights', { params: { range } });
     return response.data;
   },
 
-  // Insights
-  async getInsights(range: string): Promise<Insight[]> {
-    const response = await api.get<Insight[]>('/dashboard/insights', {
-      params: { range },
-    });
-    return response.data;
-  },
-
-  // Health Check
   async healthCheck(): Promise<{ status: string; openrouter: boolean }> {
     const response = await api.get('/health');
     return response.data;

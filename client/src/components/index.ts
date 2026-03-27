@@ -7,3 +7,4 @@ export { InsightCard } from './InsightCard';
 export { ModelCostTable } from './ModelCostTable';
 export { CurrencySelector } from './CurrencySelector';
 export { DashboardHeader } from './DashboardHeader';
+export { SyncButton } from './SyncButton';

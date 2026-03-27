@@ -25,6 +25,10 @@ export const formatDateTime = (date: string | Date): string => {
   return dayjs(date).format('DD/MM/YYYY HH:mm');
 };
 
+export const format = (date: Date | string, formatStr: string = 'DD/MM/YYYY'): string => {
+  return dayjs(date).format(formatStr);
+};
+
 export const formatTokens = (tokens: number): string => {
   if (tokens >= 1000000) {
     return `${(tokens / 1000000).toFixed(2)}M`;

@@ -7,6 +7,9 @@ dotenv.config();
 import openrouterRoutes from './routes/openrouter';
 import dashboardRoutes from './routes/dashboard';
 import exchangeRateRoutes from './routes/exchangeRate';
+import syncRoutes from './routes/sync';
+import { initializeDatabase } from './database';
+import { getCacheStats, clearCache } from './services/cache';
 
 const app: Application = express();
 
@@ -24,6 +27,14 @@ app.use((req: Request, res: Response, next: NextFunction) => {
   next();
 });
 
+// Initialize database
+try {
+  initializeDatabase();
+  console.log('[App] Database initialized');
+} catch (error: any) {
+  console.error('[App] Database initialization failed:', error.message);
+}
+
 // Health check endpoint
 app.get('/api/health', (req: Request, res: Response) => {
   res.json({
@@ -33,8 +44,19 @@ app.get('/api/health', (req: Request, res: Response) => {
   });
 });
 
+// Cache management endpoints
+app.get('/api/cache/stats', (req: Request, res: Response) => {
+  res.json(getCacheStats());
+});
+
+app.post('/api/cache/clear', (req: Request, res: Response) => {
+  clearCache();
+  res.json({ success: true, message: 'Cache cleared' });
+});
+
 // Routes
 app.use('/api/openrouter', openrouterRoutes);
+app.use('/api/openrouter', syncRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/exchange-rate', exchangeRateRoutes);
 

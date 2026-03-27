@@ -1,81 +1,21 @@
 import { Router, Request, Response } from 'express';
-import dayjs from 'dayjs';
-import { getCredits, getActivity } from '../services/openrouter';
-import { getExchangeRate } from '../services/exchangeRate';
-import {
-  aggregateByDay,
-  aggregateByModel,
-  aggregateTimeSeries,
-  generateDashboardSummary,
-  generateInsights,
-} from '../services/aggregator';
+import { aggregationService } from '../services/AggregationService';
+import { parseRange, getAvailableRanges } from '../utils/dateRanges';
 
 const router = Router();
 
-function parseDateRange(range: string): { start: string; end: string } {
-  const today = dayjs();
-  
-  switch (range) {
-    case 'today':
-      return {
-        start: today.startOf('day').toISOString(),
-        end: today.endOf('day').toISOString(),
-      };
-    case 'yesterday':
-      return {
-        start: today.subtract(1, 'day').startOf('day').toISOString(),
-        end: today.subtract(1, 'day').endOf('day').toISOString(),
-      };
-    case 'last7days':
-      return {
-        start: today.subtract(7, 'day').startOf('day').toISOString(),
-        end: today.endOf('day').toISOString(),
-      };
-    case 'last30days':
-      return {
-        start: today.subtract(30, 'day').startOf('day').toISOString(),
-        end: today.endOf('day').toISOString(),
-      };
-    case 'currentMonth':
-      return {
-        start: today.startOf('month').toISOString(),
-        end: today.endOf('day').toISOString(),
-      };
-    case 'previousMonth':
-      return {
-        start: today.subtract(1, 'month').startOf('month').toISOString(),
-        end: today.subtract(1, 'month').endOf('month').toISOString(),
-      };
-    default:
-      if (range.includes(',')) {
-        const [start, end] = range.split(',');
-        return { start, end };
-      }
-      return {
-        start: today.subtract(30, 'day').startOf('day').toISOString(),
-        end: today.endOf('day').toISOString(),
-      };
-  }
-}
-
+// GET /api/dashboard/summary
 router.get('/summary', async (req: Request, res: Response) => {
   try {
     const { range = 'last30days' } = req.query;
-    const { start, end } = parseDateRange(range as string);
-    
-    const [activities, credits, currencyInfo] = await Promise.all([
-      getActivity(start, end),
-      getCredits(),
-      getExchangeRate(),
-    ]);
+    const { data, cached } = await aggregationService.buildSummary(range as string);
 
-    const summary = await generateDashboardSummary(
-      activities,
-      credits,
-      currencyInfo.rate
-    );
-
-    res.json(summary);
+    res.json({
+      data,
+      range: parseRange(range as string),
+      cached,
+      timestamp: new Date().toISOString(),
+    });
   } catch (error: any) {
     console.error('Error in /api/dashboard/summary:', error.message);
     res.status(500).json({
@@ -85,18 +25,22 @@ router.get('/summary', async (req: Request, res: Response) => {
   }
 });
 
+// GET /api/dashboard/timeseries
 router.get('/timeseries', async (req: Request, res: Response) => {
   try {
-    const { range = 'last30days' } = req.query;
-    const { start, end } = parseDateRange(range as string);
-    
-    const [activities, currencyInfo] = await Promise.all([
-      getActivity(start, end),
-      getExchangeRate(),
-    ]);
+    const { range = 'last30days', granularity = 'day' } = req.query;
+    const { data, cached } = await aggregationService.buildTimeSeries(
+      range as string,
+      granularity as 'day' | 'week' | 'month'
+    );
 
-    const timeSeries = await aggregateTimeSeries(activities, currencyInfo.rate);
-    res.json(timeSeries);
+    res.json({
+      data,
+      range: parseRange(range as string),
+      granularity,
+      cached,
+      timestamp: new Date().toISOString(),
+    });
   } catch (error: any) {
     console.error('Error in /api/dashboard/timeseries:', error.message);
     res.status(500).json({
@@ -106,18 +50,18 @@ router.get('/timeseries', async (req: Request, res: Response) => {
   }
 });
 
+// GET /api/dashboard/models
 router.get('/models', async (req: Request, res: Response) => {
   try {
     const { range = 'last30days' } = req.query;
-    const { start, end } = parseDateRange(range as string);
-    
-    const [activities, currencyInfo] = await Promise.all([
-      getActivity(start, end),
-      getExchangeRate(),
-    ]);
+    const { data, cached } = await aggregationService.buildModelMetrics(range as string);
 
-    const models = await aggregateByModel(activities, currencyInfo.rate);
-    res.json(models);
+    res.json({
+      data,
+      range: parseRange(range as string),
+      cached,
+      timestamp: new Date().toISOString(),
+    });
   } catch (error: any) {
     console.error('Error in /api/dashboard/models:', error.message);
     res.status(500).json({
@@ -127,23 +71,56 @@ router.get('/models', async (req: Request, res: Response) => {
   }
 });
 
+// GET /api/dashboard/insights
 router.get('/insights', async (req: Request, res: Response) => {
   try {
     const { range = 'last30days' } = req.query;
-    const { start, end } = parseDateRange(range as string);
-    
-    const [activities, currencyInfo] = await Promise.all([
-      getActivity(start, end),
-      getExchangeRate(),
-    ]);
+    const { data, cached } = await aggregationService.buildInsights(range as string);
 
-    const models = await aggregateByModel(activities, currencyInfo.rate);
-    const insights = await generateInsights(activities, models, currencyInfo.rate);
-    res.json(insights);
+    res.json({
+      data,
+      range: parseRange(range as string),
+      cached,
+      timestamp: new Date().toISOString(),
+    });
   } catch (error: any) {
     console.error('Error in /api/dashboard/insights:', error.message);
     res.status(500).json({
       error: 'Failed to generate insights',
+      message: error.message,
+    });
+  }
+});
+
+// GET /api/dashboard/ranges - Get available range options
+router.get('/ranges', async (req: Request, res: Response) => {
+  res.json({
+    ranges: getAvailableRanges(),
+  });
+});
+
+// GET /api/dashboard/status - Get data status
+router.get('/status', async (req: Request, res: Response) => {
+  try {
+    const { activityRepository } = await import('../repositories/ActivityRepository');
+    const { getCacheStats } = await import('../services/cache');
+    
+    const dataRange = activityRepository.getDataRange();
+    const activityCount = activityRepository.count();
+    const recentSyncs = activityRepository.getRecentSyncLogs(5);
+    const cacheStats = getCacheStats();
+
+    res.json({
+      hasData: activityCount > 0,
+      activityCount,
+      dataRange,
+      recentSyncs,
+      cache: cacheStats,
+    });
+  } catch (error: any) {
+    console.error('Error in /api/dashboard/status:', error.message);
+    res.status(500).json({
+      error: 'Failed to get status',
       message: error.message,
     });
   }
