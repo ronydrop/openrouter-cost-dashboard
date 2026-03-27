@@ -8,8 +8,9 @@ import openrouterRoutes from './routes/openrouter';
 import dashboardRoutes from './routes/dashboard';
 import exchangeRateRoutes from './routes/exchangeRate';
 import syncRoutes from './routes/sync';
-import { initializeDatabase } from './database';
+import { initializeDatabase, getDb } from './database';
 import { getCacheStats, clearCache } from './services/cache';
+import { activityIngestionService } from './services/ActivityIngestionService';
 
 const app: Application = express();
 
@@ -27,13 +28,32 @@ app.use((req: Request, res: Response, next: NextFunction) => {
   next();
 });
 
-// Initialize database
-try {
-  initializeDatabase();
-  console.log('[App] Database initialized');
-} catch (error: any) {
-  console.error('[App] Database initialization failed:', error.message);
+// Initialize database and auto-sync data if empty
+async function initApp() {
+  try {
+    const db = await getDb();
+    console.log('[App] Database initialized');
+
+    // Check if database has data; if not, auto-sync to populate dashboard
+    const result = db.exec('SELECT COUNT(*) FROM activity_logs');
+    const count = result.length ? (result[0].values[0][0] as number) : 0;
+
+    if (count === 0) {
+      console.log('[App] No data found, running initial sync...');
+      activityIngestionService.syncFromOpenRouter('last30days').then((syncResult) => {
+        console.log(`[App] Initial sync completed: ${syncResult.recordsSynced} records`);
+      }).catch((err: Error) => {
+        console.error('[App] Initial sync failed:', err.message);
+      });
+    } else {
+      console.log(`[App] Database has ${count} records`);
+    }
+  } catch (error: any) {
+    console.error('[App] Database initialization failed:', error.message);
+  }
 }
+
+initApp();
 
 // Health check endpoint
 app.get('/api/health', (req: Request, res: Response) => {

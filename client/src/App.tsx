@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { QueryClient, QueryClientProvider, useQueryClient } from '@tanstack/react-query';
 import { DashboardHeader, SummaryCards, SpendOverTimeChart, SpendByModelChart, InsightCard, ModelCostTable, SyncButton } from './components';
 import { useDashboardSummary, useTimeSeries, useModelMetrics, useInsights, useSyncData } from './hooks/useDashboard';
+import { apiService } from './services/api';
 import type { DateRange } from './types';
 
 const queryClient = new QueryClient({ defaultOptions: { queries: { refetchOnWindowFocus: false, retry: 1 } } });
@@ -26,6 +27,22 @@ function Dashboard() {
   const modelMetrics = modelMetricsResponse?.data;
   const insights = insightsResponse?.data;
   const syncMutation = useSyncData();
+
+  // Check if database already has data on mount
+  useEffect(() => {
+    apiService.getDashboardStatus().then((status) => {
+      setHasData(status.hasData);
+    }).catch(() => {
+      // Server might not be ready yet, ignore
+    });
+  }, []);
+
+  // Update hasData when summary loads with actual data
+  useEffect(() => {
+    if (summary && summary.totalRequests > 0) {
+      setHasData(true);
+    }
+  }, [summary]);
 
   const handleSync = async () => {
     setSyncError(null);

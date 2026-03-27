@@ -75,6 +75,11 @@ export class ActivityIngestionService {
   }
 
   private async fetchFromOpenRouter(range: TimeRange): Promise<any[]> {
+    if (!API_KEY || API_KEY === 'sk-or-v1-your-api-key-here') {
+      console.log('[Ingestion] No valid API key configured, skipping API fetch');
+      return [];
+    }
+
     try {
       const response = await apiClient.get('/activities', {
         params: { limit: 1000, start_date: range.start, end_date: range.end },
@@ -83,6 +88,11 @@ export class ActivityIngestionService {
     } catch (error: any) {
       if (error.response?.status === 404) {
         return this.fetchFromGenerations(range);
+      }
+      // For auth errors or other API failures, return empty to trigger sample data
+      if (error.response?.status === 401 || error.response?.status === 403) {
+        console.log('[Ingestion] API authentication failed, will use sample data');
+        return [];
       }
       throw error;
     }
@@ -173,6 +183,10 @@ export class ActivityIngestionService {
   }
 
   private async saveCreditSnapshot(): Promise<void> {
+    if (!API_KEY || API_KEY === 'sk-or-v1-your-api-key-here') {
+      return;
+    }
+
     try {
       const response = await apiClient.get('/credits');
       const data = response.data?.data;

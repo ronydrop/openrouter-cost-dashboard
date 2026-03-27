@@ -1,9 +1,12 @@
 import dayjs from 'dayjs';
+import dayOfYear from 'dayjs/plugin/dayOfYear';
 import { activityRepository } from '../repositories/ActivityRepository';
 import { NormalizedActivityItem, DailyMetrics, ModelMetrics, DashboardSummary, TimeSeriesData, Insight } from '../types';
 import { getExchangeRate, convertToBrl } from './exchangeRate';
 import { parseRange, TimeRange, getPreviousPeriod } from '../utils/dateRanges';
 import { withCache, getDashboardCacheKey } from './cache';
+
+dayjs.extend(dayOfYear);
 
 export class AggregationService {
   private async getActivitiesForRange(range: TimeRange): Promise<NormalizedActivityItem[]> {
