@@ -1,0 +1,168 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
+  line-height: 1.5;
+  font-weight: 400;
+  color-scheme: light dark;
+  color: rgba(17, 24, 39, 0.87);
+  background-color: #f8fafc;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    color: #f3f4f6;
+    background-color: #0f172a;
+  }
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+/* Card styles */
+.card {
+  @apply bg-white rounded-xl shadow-sm border border-gray-200 p-6;
+}
+
+.dark .card {
+  @apply bg-slate-800 border-slate-700;
+}
+
+/* Stat card styles */
+.stat-card {
+  @apply bg-white rounded-xl shadow-sm border border-gray-200 p-5 transition-all hover:shadow-md;
+}
+
+.dark .stat-card {
+  @apply bg-slate-800 border-slate-700;
+}
+
+.stat-card-value {
+  @apply text-2xl font-bold text-gray-900;
+}
+
+.dark .stat-card-value {
+  @apply text-white;
+}
+
+.stat-card-label {
+  @apply text-sm text-gray-500 mt-1;
+}
+
+.dark .stat-card-label {
+  @apply text-gray-400;
+}
+
+/* Chart container */
+.chart-container {
+  @apply bg-white rounded-xl shadow-sm border border-gray-200 p-6;
+}
+
+.dark .chart-container {
+  @apply bg-slate-800 border-slate-700;
+}
+
+/* Table styles */
+.data-table {
+  @apply w-full text-sm text-left;
+}
+
+.data-table th {
+  @apply px-4 py-3 font-semibold text-gray-700 bg-gray-50 border-b border-gray-200;
+}
+
+.dark .data-table th {
+  @apply text-gray-300 bg-slate-700 border-slate-600;
+}
+
+.data-table td {
+  @apply px-4 py-3 border-b border-gray-100;
+}
+
+.dark .data-table td {
+  @apply border-slate-700;
+}
+
+.data-table tr:hover {
+  @apply bg-gray-50;
+}
+
+.dark .data-table tr:hover {
+  @apply bg-slate-700/50;
+}
+
+/* Button styles */
+.btn {
+  @apply px-4 py-2 rounded-lg font-medium transition-all duration-200;
+}
+
+.btn-primary {
+  @apply bg-primary-600 text-white hover:bg-primary-700;
+}
+
+.btn-secondary {
+  @apply bg-gray-100 text-gray-700 hover:bg-gray-200;
+}
+
+.dark .btn-secondary {
+  @apply bg-slate-700 text-gray-200 hover:bg-slate-600;
+}
+
+/* Insight card */
+.insight-card {
+  @apply bg-gradient-to-r from-primary-50 to-blue-50 border-l-4 border-primary-500 p-4 rounded-r-lg;
+}
+
+.dark .insight-card {
+  @apply bg-gradient-to-r from-slate-800 to-slate-700;
+}
+
+.insight-card-warning {
+  @apply bg-gradient-to-r from-amber-50 to-yellow-50 border-amber-500;
+}
+
+.dark .insight-card-warning {
+  @apply bg-gradient-to-r from-slate-800 to-slate-700;
+}
+
+.insight-card-danger {
+  @apply bg-gradient-to-r from-red-50 to-rose-50 border-red-500;
+}
+
+.dark .insight-card-danger {
+  @apply bg-gradient-to-r from-slate-800 to-slate-700;
+}
+
+/* Loading spinner */
+.spinner {
+  @apply animate-spin rounded-full h-8 w-8 border-4 border-primary-200 border-t-primary-600;
+}
