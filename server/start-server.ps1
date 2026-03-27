@@ -1,19 +1,29 @@
-# OpenRouter Dashboard - Server Start Script
-Write-Host "========================================" -ForegroundColor Cyan
-Write-Host "OpenRouter Cost Dashboard - Backend" -ForegroundColor Cyan
-Write-Host "========================================" -ForegroundColor Cyan
-Write-Host ""
+# OpenRouter Dashboard Server Startup Script
+param(
+    [string]$Port = "3001"
+)
 
-$ErrorActionPreference = "Stop"
+$ErrorActionPreference = "Continue"
 
-# Check if dependencies are installed
-if (-not (Test-Path "node_modules")) {
-    Write-Host "Installing dependencies..." -ForegroundColor Yellow
-    npm install
+# Kill existing process on port
+$process = Get-NetTCPConnection -LocalPort $Port -ErrorAction SilentlyContinue | Select-Object -First 1
+if ($process) {
+    Write-Host "Stopping existing process on port $Port..."
+    Stop-Process -Id $process.OwningProcess -Force -ErrorAction SilentlyContinue
+    Start-Sleep -Seconds 2
 }
 
-Write-Host "Starting server on http://localhost:3001" -ForegroundColor Green
-Write-Host "Press Ctrl+C to stop" -ForegroundColor Gray
+# Navigate to server directory
+Set-Location $PSScriptRoot
+
+# Start server using Node directly
+Write-Host "Starting OpenRouter Dashboard Server..."
 Write-Host ""
 
-npx tsx src/server.ts
+try {
+    node --loader tsx --no-warnings src/server.ts
+} catch {
+    Write-Host "Error: $_" -ForegroundColor Red
+    Write-Host "Make sure Node.js is installed and dependencies are loaded." -ForegroundColor Yellow
+    Write-Host "Run 'npm install' first." -ForegroundColor Yellow
+}
