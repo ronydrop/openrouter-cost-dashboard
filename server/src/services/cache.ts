@@ -1,7 +1,7 @@
 import NodeCache from 'node-cache';
 
-const CACHE_TTL = parseInt(process.env.CACHE_TTL || '300', 10);
-const cache = new NodeCache({ stdTTL: CACHE_TTL, checkperiod: 60 });
+const CACHE_TTL = parseInt(process.env.CACHE_TTL || '60', 10);
+const cache = new NodeCache({ stdTTL: CACHE_TTL, checkperiod: 30 });
 
 export function getDashboardCacheKey(endpoint: string, range: string): string {
   return `dashboard:${endpoint}:${range}`;
@@ -34,9 +34,15 @@ export function getCacheStats() {
   return { keys: cache.keys().length, hits: stats.hits, misses: stats.misses };
 }
 
-export async function withCache<T>(key: string, fn: () => Promise<T>, ttl?: number): Promise<{ data: T; cached: boolean }> {
+export async function withCache<T>(
+  key: string,
+  fn: () => Promise<T>,
+  ttl?: number
+): Promise<{ data: T; cached: boolean }> {
   const cached = getCache<T>(key);
-  if (cached !== undefined) return { data: cached, cached: true };
+  if (cached !== undefined) {
+    return { data: cached, cached: true };
+  }
   const data = await fn();
   setCache(key, data, ttl);
   return { data, cached: false };

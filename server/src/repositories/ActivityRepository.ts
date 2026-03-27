@@ -1,5 +1,5 @@
 import { getDb, saveDatabase } from '../database';
-import { ActivityItem, ActivityLogRow, NormalizedActivityItem, CreditSnapshot, SyncLog } from '../types';
+import { ActivityItem, NormalizedActivityItem, CreditSnapshot, SyncLog } from '../types';
 import { TimeRange } from '../utils/dateRanges';
 
 export class ActivityRepository {
@@ -9,12 +9,12 @@ export class ActivityRepository {
       request_id: row.request_id,
       timestamp: row.timestamp,
       model: row.model,
-      provider: row.provider,
+      provider: row.provider || 'unknown',
       user_label: row.user_label || undefined,
-      prompt_tokens: row.prompt_tokens,
-      completion_tokens: row.completion_tokens,
-      total_tokens: row.total_tokens,
-      cost_usd: row.cost_usd,
+      prompt_tokens: row.prompt_tokens || 0,
+      completion_tokens: row.completion_tokens || 0,
+      total_tokens: row.total_tokens || 0,
+      cost_usd: row.cost_usd || 0,
       meta: row.meta ? JSON.parse(row.meta) : undefined,
       created_at: row.created_at,
       updated_at: row.updated_at,
@@ -36,10 +36,7 @@ export class ActivityRepository {
 
   async findByRange(range: TimeRange): Promise<ActivityItem[]> {
     const db = await getDb();
-    const result = db.exec(
-      `SELECT * FROM activity_logs WHERE timestamp >= ? AND timestamp <= ? ORDER BY timestamp DESC`,
-      [range.start, range.end]
-    );
+    const result = db.exec(`SELECT * FROM activity_logs WHERE timestamp >= ? AND timestamp <= ? ORDER BY timestamp DESC`, [range.start, range.end]);
     if (!result.length) return [];
     const cols = result[0].columns;
     return result[0].values.map((row: any[]) => {
@@ -74,41 +71,31 @@ export class ActivityRepository {
     return this.rowToActivity(obj);
   }
 
-  upsert(activity: Partial<ActivityItem>): void {
-    const db = getDb().then(d => {
-      d.run(`INSERT OR REPLACE INTO activity_logs (
-        request_id, timestamp, model, provider, user_label, prompt_tokens, completion_tokens, total_tokens, cost_usd, meta, updated_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))`,
-      [activity.request_id, activity.timestamp, activity.model, activity.provider || 'unknown', activity.user_label || null,
-       activity.prompt_tokens || 0, activity.completion_tokens || 0, activity.total_tokens || 0, activity.cost_usd || 0,
-       activity.meta ? JSON.stringify(activity.meta) : null]);
-      saveDatabase();
-    });
+  async upsert(activity: Partial<ActivityItem>): Promise<void> {
+    const db = await getDb();
+    db.run(`INSERT OR REPLACE INTO activity_logs (request_id, timestamp, model, provider, user_label, prompt_tokens, completion_tokens, total_tokens, cost_usd, meta, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))`,
+      [activity.request_id || '', activity.timestamp || '', activity.model || '', activity.provider || 'unknown', activity.user_label || null, activity.prompt_tokens || 0, activity.completion_tokens || 0, activity.total_tokens || 0, activity.cost_usd || 0, activity.meta ? JSON.stringify(activity.meta) : null]);
+    saveDatabase();
   }
 
-  bulkUpsert(activities: Partial<ActivityItem>[]): number {
-    const db = getDb().then(d => {
-      for (const activity of activities) {
-        d.run(`INSERT OR REPLACE INTO activity_logs (
-          request_id, timestamp, model, provider, user_label, prompt_tokens, completion_tokens, total_tokens, cost_usd, meta, updated_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))`,
-        [activity.request_id, activity.timestamp, activity.model, activity.provider || 'unknown', activity.user_label || null,
-         activity.prompt_tokens || 0, activity.completion_tokens || 0, activity.total_tokens || 0, activity.cost_usd || 0,
-         activity.meta ? JSON.stringify(activity.meta) : null]);
-      }
-      saveDatabase();
-    });
+  async bulkUpsert(activities: Partial<ActivityItem>[]): Promise<number> {
+    const db = await getDb();
+    for (const activity of activities) {
+      db.run(`INSERT OR REPLACE INTO activity_logs (request_id, timestamp, model, provider, user_label, prompt_tokens, completion_tokens, total_tokens, cost_usd, meta, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))`,
+        [activity.request_id || '', activity.timestamp || '', activity.model || '', activity.provider || 'unknown', activity.user_label || null, activity.prompt_tokens || 0, activity.completion_tokens || 0, activity.total_tokens || 0, activity.cost_usd || 0, activity.meta ? JSON.stringify(activity.meta) : null]);
+    }
+    saveDatabase();
     return activities.length;
   }
 
   async count(range?: TimeRange): Promise<number> {
     const db = await getDb();
     if (!range) {
-      const result = db.exec('SELECT COUNT(*) as count FROM activity_logs');
-      return result.length ? result[0].values[0][0] as number : 0;
+      const result = db.exec('SELECT COUNT(*) FROM activity_logs');
+      return result.length ? (result[0].values[0][0] as number) || 0 : 0;
     }
     const result = db.exec('SELECT COUNT(*) FROM activity_logs WHERE timestamp >= ? AND timestamp <= ?', [range.start, range.end]);
-    return result.length ? result[0].values[0][0] as number : 0;
+    return result.length ? (result[0].values[0][0] as number) || 0 : 0;
   }
 
   async getTotalCost(range?: TimeRange): Promise<number> {
@@ -121,12 +108,11 @@ export class ActivityRepository {
     return result.length ? (result[0].values[0][0] as number) || 0 : 0;
   }
 
-  saveCreditSnapshot(snapshot: CreditSnapshot): void {
-    getDb().then(d => {
-      d.run(`INSERT INTO credit_snapshots (total_credits, used_credits, remaining_credits, snapshot_date) VALUES (?, ?, ?, ?)`,
-        [snapshot.total_credits, snapshot.used_credits, snapshot.remaining_credits, snapshot.snapshot_date]);
-      saveDatabase();
-    });
+  async saveCreditSnapshot(snapshot: CreditSnapshot): Promise<void> {
+    const db = await getDb();
+    db.run(`INSERT INTO credit_snapshots (total_credits, used_credits, remaining_credits, snapshot_date) VALUES (?, ?, ?, ?)`,
+      [snapshot.total_credits, snapshot.used_credits, snapshot.remaining_credits, snapshot.snapshot_date]);
+    saveDatabase();
   }
 
   async getLatestCreditSnapshot(): Promise<CreditSnapshot | null> {
@@ -139,12 +125,11 @@ export class ActivityRepository {
     return obj;
   }
 
-  logSync(syncLog: SyncLog): void {
-    getDb().then(d => {
-      d.run(`INSERT INTO sync_logs (sync_type, range_start, range_end, records_synced, status, error_message) VALUES (?, ?, ?, ?, ?, ?)`,
-        [syncLog.sync_type, syncLog.range_start || null, syncLog.range_end || null, syncLog.records_synced, syncLog.status, syncLog.error_message || null]);
-      saveDatabase();
-    });
+  async logSync(syncLog: SyncLog): Promise<void> {
+    const db = await getDb();
+    db.run(`INSERT INTO sync_logs (sync_type, range_start, range_end, records_synced, status, error_message) VALUES (?, ?, ?, ?, ?, ?)`,
+      [syncLog.sync_type, syncLog.range_start || '', syncLog.range_end || '', syncLog.records_synced, syncLog.status, syncLog.error_message || '']);
+    saveDatabase();
   }
 
   async getRecentSyncLogs(limit: number = 10): Promise<SyncLog[]> {
