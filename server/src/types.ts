@@ -1,16 +1,34 @@
-// Types for the backend - Extended for SQLite persistence
+// Types for the backend - Extended schema for OpenRouter analytics
 
 export interface ActivityItem {
   id?: number;
+  generation_id?: string;
+  session_id?: string;
+  task_id?: string;
+  user_id?: string;
   request_id: string;
   timestamp: string;
   model: string;
-  provider: string;
+  provider?: string;
+  provider_name?: string;
+  api_type?: string;
+  api_key_name?: string;
+  api_key_hash?: string;
   user_label?: string;
-  prompt_tokens: number;
-  completion_tokens: number;
-  total_tokens: number;
-  cost_usd: number;
+  cost?: number;
+  cost_usd?: number;
+  prompt_tokens?: number;
+  completion_tokens?: number;
+  reasoning_tokens?: number;
+  cached_tokens?: number;
+  total_tokens?: number;
+  response_time_ms?: number;
+  success?: number;
+  error_message?: string;
+  endpoint?: string;
+  environment?: string;
+  feature_name?: string;
+  metadata?: string;
   meta?: Record<string, any>;
   created_at?: string;
   updated_at?: string;
@@ -19,16 +37,31 @@ export interface ActivityItem {
 // Database row type (snake_case)
 export interface ActivityLogRow {
   id: number;
+  generation_id: string | null;
+  session_id: string | null;
+  task_id: string | null;
+  user_id: string | null;
   request_id: string;
   timestamp: string;
   model: string;
-  provider: string;
+  provider_name: string | null;
+  api_type: string | null;
+  api_key_name: string | null;
+  api_key_hash: string | null;
   user_label: string | null;
+  cost: number;
   prompt_tokens: number;
   completion_tokens: number;
+  reasoning_tokens: number;
+  cached_tokens: number;
   total_tokens: number;
-  cost_usd: number;
-  meta: string | null;
+  response_time_ms: number | null;
+  success: number;
+  error_message: string | null;
+  endpoint: string | null;
+  environment: string | null;
+  feature_name: string | null;
+  metadata: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -41,6 +74,19 @@ export interface CreditSnapshot {
   remaining_credits: number;
   snapshot_date: string;
   created_at?: string;
+}
+
+// API Keys table
+export interface ApiKeyRecord {
+  id?: number;
+  key_name: string;
+  key_hash: string;
+  total_cost: number;
+  total_requests: number;
+  total_tokens: number;
+  last_used: string | null;
+  created_at?: string;
+  updated_at?: string;
 }
 
 // Sync log
@@ -63,8 +109,64 @@ export interface NormalizedActivityItem {
   requests: number;
   promptTokens: number;
   completionTokens: number;
+  reasoningTokens: number;
+  cachedTokens: number;
   totalTokens: number;
   costUsd: number;
+  responseTimeMs?: number;
+  success: boolean;
+  apiKeyName?: string;
+  endpoint?: string;
+  environment?: string;
+}
+
+// Extended metrics
+export interface ProviderMetrics {
+  provider: string;
+  totalCostUsd: number;
+  totalCostBrl: number;
+  totalRequests: number;
+  totalTokens: number;
+  avgCostPerRequest: number;
+  percentOfTotal: number;
+}
+
+export interface ApiKeyMetrics {
+  api_key_name: string;
+  totalCostUsd: number;
+  totalCostBrl: number;
+  totalRequests: number;
+  totalTokens: number;
+  avgCostPerRequest: number;
+  percentOfTotal: number;
+  lastUsed: string | null;
+}
+
+export interface HourlyMetrics {
+  hour: string;
+  dayOfWeek: string;
+  totalCostUsd: number;
+  totalRequests: number;
+  avgCostPerRequest: number;
+}
+
+export interface EndpointMetrics {
+  endpoint: string;
+  totalCostUsd: number;
+  totalRequests: number;
+  avgResponseTime: number;
+  successRate: number;
+}
+
+export interface TokenMetrics {
+  totalPromptTokens: number;
+  totalCompletionTokens: number;
+  totalReasoningTokens: number;
+  totalCachedTokens: number;
+  totalTokens: number;
+  promptPercent: number;
+  completionPercent: number;
+  cachedPercent: number;
 }
 
 // Dashboard types
@@ -76,6 +178,9 @@ export interface DailyMetrics {
   totalPromptTokens: number;
   totalCompletionTokens: number;
   totalTokens: number;
+  avgCostPerRequest: number;
+  avgResponseTime: number;
+  successRate: number;
   models: string[];
 }
 
@@ -87,9 +192,13 @@ export interface ModelMetrics {
   totalRequests: number;
   totalPromptTokens: number;
   totalCompletionTokens: number;
+  totalReasoningTokens: number;
+  totalCachedTokens: number;
   totalTokens: number;
   avgCostPerRequest: number;
   avgCostPerToken: number;
+  avgResponseTime: number;
+  successRate: number;
   percentOfTotal: number;
 }
 
@@ -109,6 +218,9 @@ export interface DashboardSummary {
   avgDailyCostBrl: number;
   totalRequests: number;
   totalTokens: number;
+  avgCostPerRequest: number;
+  avgResponseTime: number;
+  successRate: number;
   exchangeRate: number;
   exchangeRateSource: string;
   exchangeRateMode: 'auto' | 'manual';
@@ -134,8 +246,10 @@ export interface TimeSeriesData {
   }[];
 }
 
-// Insight types - Updated per requirements
-export type InsightType = 'model_concentration' | 'trend_change' | 'peak_day' | 'info' | 'warning' | 'critical';
+// Insight types
+export type InsightType = 'model_concentration' | 'trend_change' | 'peak_day' | 
+  'api_key_cost' | 'hourly_heatmap' | 'token_efficiency' | 'success_rate' | 'cost_anomaly' | 'info';
+
 export type InsightSeverity = 'info' | 'warning' | 'critical';
 
 export interface Insight {
@@ -145,14 +259,6 @@ export interface Insight {
   title: string;
   description: string;
   meta?: Record<string, any>;
-}
-
-export interface LegacyInsight {
-  id: string;
-  type: 'info' | 'warning' | 'danger';
-  title: string;
-  description: string;
-  priority: 'high' | 'medium' | 'low';
   potentialSavings?: {
     usd: number;
     brl: number;
@@ -176,6 +282,14 @@ export interface OpenRouterActivityItem {
   completion_tokens?: number;
   requests?: number;
   date: string;
+}
+
+export interface OpenRouterKey {
+  name: string;
+  hash: string;
+  total_usage?: number;
+  total_requests?: number;
+  last_used?: string;
 }
 
 // API Response types
@@ -207,6 +321,21 @@ export interface CurrencyInfo {
 
 // Sync options
 export interface SyncOptions {
-  range: string;  // 'today', 'last7days', 'last30days', or 'YYYY-MM-DD,YYYY-MM-DD'
+  range: string;
   forceRefresh?: boolean;
+}
+
+// Extended dashboard data
+export interface ExtendedDashboardData {
+  summary: DashboardSummary;
+  providers: ProviderMetrics[];
+  apiKeys: ApiKeyMetrics[];
+  hourly: HourlyMetrics[];
+  endpoints: EndpointMetrics[];
+  tokens: TokenMetrics;
+  topRequests: {
+    model: string;
+    cost: number;
+    timestamp: string;
+  }[];
 }

@@ -10,6 +10,10 @@ export const useSyncData = () => {
       queryClient.invalidateQueries({ queryKey: ['dashboardSummary'] });
       queryClient.invalidateQueries({ queryKey: ['timeSeries'] });
       queryClient.invalidateQueries({ queryKey: ['modelMetrics'] });
+      queryClient.invalidateQueries({ queryKey: ['providerMetrics'] });
+      queryClient.invalidateQueries({ queryKey: ['apiKeyMetrics'] });
+      queryClient.invalidateQueries({ queryKey: ['hourlyMetrics'] });
+      queryClient.invalidateQueries({ queryKey: ['tokenMetrics'] });
       queryClient.invalidateQueries({ queryKey: ['insights'] });
     },
   });
@@ -33,12 +37,83 @@ export const useUpdateExchangeRate = () => {
   });
 };
 
-export const useDashboardSummary = (range: string) => useQuery({ queryKey: ['dashboardSummary', range], queryFn: () => apiService.getDashboardSummary(range), staleTime: 2 * 60 * 1000, retry: 1 });
+export const useDashboardSummary = (range: string) => useQuery({ 
+  queryKey: ['dashboardSummary', range], 
+  queryFn: () => apiService.getDashboardSummary(range), 
+  staleTime: 2 * 60 * 1000, 
+  retry: 1 
+});
 
-export const useTimeSeries = (range: string, granularity?: string) => useQuery({ queryKey: ['timeSeries', range, granularity], queryFn: () => apiService.getTimeSeries(range, granularity), staleTime: 2 * 60 * 1000, retry: 1 });
+export const useTimeSeries = (range: string, granularity?: string) => useQuery({ 
+  queryKey: ['timeSeries', range, granularity], 
+  queryFn: () => apiService.getTimeSeries(range, granularity), 
+  staleTime: 2 * 60 * 1000, 
+  retry: 1 
+});
 
-export const useModelMetrics = (range: string) => useQuery({ queryKey: ['modelMetrics', range], queryFn: () => apiService.getModelMetrics(range), staleTime: 2 * 60 * 1000, retry: 1 });
+export const useModelMetrics = (range: string) => useQuery({ 
+  queryKey: ['modelMetrics', range], 
+  queryFn: () => apiService.getModelMetrics(range), 
+  staleTime: 2 * 60 * 1000, 
+  retry: 1 
+});
 
-export const useInsights = (range: string) => useQuery({ queryKey: ['insights', range], queryFn: () => apiService.getInsights(range), staleTime: 2 * 60 * 1000, retry: 1 });
+export const useProviderMetrics = (range: string) => useQuery({ 
+  queryKey: ['providerMetrics', range], 
+  queryFn: () => apiService.getProviderMetrics(range), 
+  staleTime: 2 * 60 * 1000, 
+  retry: 1 
+});
 
-export const useHealthCheck = () => useQuery({ queryKey: ['health'], queryFn: () => apiService.healthCheck(), staleTime: 30 * 1000, refetchInterval: 60 * 1000, retry: 1 });
+export const useApiKeyMetrics = (range: string) => useQuery({ 
+  queryKey: ['apiKeyMetrics', range], 
+  queryFn: () => apiService.getApiKeyMetrics(range), 
+  staleTime: 2 * 60 * 1000, 
+  retry: 1 
+});
+
+export const useHourlyMetrics = (range: string) => useQuery({ 
+  queryKey: ['hourlyMetrics', range], 
+  queryFn: () => apiService.getHourlyMetrics(range), 
+  staleTime: 2 * 60 * 1000, 
+  retry: 1 
+});
+
+export const useTokenMetrics = (range: string) => useQuery({ 
+  queryKey: ['tokenMetrics', range], 
+  queryFn: () => apiService.getTokenMetrics(range), 
+  staleTime: 2 * 60 * 1000, 
+  retry: 1 
+});
+
+export const useExtendedDashboard = (range: string) => useQuery({ 
+  queryKey: ['extendedDashboard', range], 
+  queryFn: () => apiService.getExtendedDashboard(range), 
+  staleTime: 2 * 60 * 1000, 
+  retry: 1 
+});
+
+export const useInsights = (range: string) => useQuery({ 
+  queryKey: ['insights', range], 
+  queryFn: () => apiService.getInsights(range), 
+  staleTime: 2 * 60 * 1000, 
+  retry: 1 
+});
+
+export const useClearCache = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: () => apiService.clearCache(),
+    onSuccess: () => {
+      queryClient.clear();
+    },
+  });
+};
+
+export const useHealthCheck = () => useQuery({ 
+  queryKey: ['health'], 
+  queryFn: () => apiService.healthCheck(), 
+  staleTime: 30 * 1000, 
+  refetchInterval: 60 * 1000, 
+  retry: 1 
+});

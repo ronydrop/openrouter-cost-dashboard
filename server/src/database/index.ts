@@ -34,30 +34,52 @@ async function initDatabase(): Promise<SqlJsDatabase> {
     db = new SQL.Database();
   }
 
+  // Main activity logs table - expanded schema
   db.run(`
     CREATE TABLE IF NOT EXISTS activity_logs (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
+      generation_id TEXT,
+      session_id TEXT,
+      task_id TEXT,
+      user_id TEXT,
       request_id TEXT NOT NULL,
       timestamp TEXT NOT NULL,
       model TEXT NOT NULL,
-      provider TEXT DEFAULT 'unknown',
-      user_label TEXT,
+      provider_name TEXT DEFAULT 'unknown',
+      api_type TEXT DEFAULT 'openai',
+      api_key_name TEXT,
+      api_key_hash TEXT,
+      cost REAL DEFAULT 0,
       prompt_tokens INTEGER DEFAULT 0,
       completion_tokens INTEGER DEFAULT 0,
+      reasoning_tokens INTEGER DEFAULT 0,
+      cached_tokens INTEGER DEFAULT 0,
       total_tokens INTEGER DEFAULT 0,
-      cost_usd REAL DEFAULT 0,
-      meta TEXT,
+      response_time_ms INTEGER,
+      success INTEGER DEFAULT 1,
+      error_message TEXT,
+      endpoint TEXT DEFAULT '/chat/completions',
+      environment TEXT DEFAULT 'production',
+      feature_name TEXT,
+      metadata TEXT,
       created_at TEXT DEFAULT (datetime('now')),
       updated_at TEXT DEFAULT (datetime('now')),
       UNIQUE(request_id, timestamp)
     )
   `);
 
-  db.run(`CREATE INDEX IF NOT EXISTS idx_activity_timestamp ON activity_logs(timestamp)`);
-  db.run(`CREATE INDEX IF NOT EXISTS idx_activity_model ON activity_logs(model)`);
-  db.run(`CREATE INDEX IF NOT EXISTS idx_activity_provider ON activity_logs(provider)`);
-  db.run(`CREATE INDEX IF NOT EXISTS idx_activity_request_id ON activity_logs(request_id)`);
+  // Indexes for common queries
+  db.run(`CREATE INDEX IF NOT EXISTS idx_timestamp ON activity_logs(timestamp)`);
+  db.run(`CREATE INDEX IF NOT EXISTS idx_model ON activity_logs(model)`);
+  db.run(`CREATE INDEX IF NOT EXISTS idx_provider ON activity_logs(provider_name)`);
+  db.run(`CREATE INDEX IF NOT EXISTS idx_api_key ON activity_logs(api_key_name)`);
+  db.run(`CREATE INDEX IF NOT EXISTS idx_session ON activity_logs(session_id)`);
+  db.run(`CREATE INDEX IF NOT EXISTS idx_task ON activity_logs(task_id)`);
+  db.run(`CREATE INDEX IF NOT EXISTS idx_user ON activity_logs(user_id)`);
+  db.run(`CREATE INDEX IF NOT EXISTS idx_cost ON activity_logs(cost)`);
+  db.run(`CREATE INDEX IF NOT EXISTS idx_hour ON activity_logs(timestamp)`);
 
+  // Credit snapshots table
   db.run(`
     CREATE TABLE IF NOT EXISTS credit_snapshots (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -71,6 +93,22 @@ async function initDatabase(): Promise<SqlJsDatabase> {
 
   db.run(`CREATE INDEX IF NOT EXISTS idx_credits_date ON credit_snapshots(snapshot_date)`);
 
+  // API Keys table (from /keys endpoint)
+  db.run(`
+    CREATE TABLE IF NOT EXISTS api_keys (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      key_name TEXT NOT NULL,
+      key_hash TEXT UNIQUE,
+      total_cost REAL DEFAULT 0,
+      total_requests INTEGER DEFAULT 0,
+      total_tokens INTEGER DEFAULT 0,
+      last_used TEXT,
+      created_at TEXT DEFAULT (datetime('now')),
+      updated_at TEXT DEFAULT (datetime('now'))
+    )
+  `);
+
+  // Sync logs table
   db.run(`
     CREATE TABLE IF NOT EXISTS sync_logs (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -84,8 +122,10 @@ async function initDatabase(): Promise<SqlJsDatabase> {
     )
   `);
 
+  db.run(`CREATE INDEX IF NOT EXISTS idx_sync_status ON sync_logs(status)`);
+
   saveDatabase();
-  console.log('[DB] Database initialized successfully');
+  console.log('[DB] Database initialized with expanded schema');
   return db;
 }
 

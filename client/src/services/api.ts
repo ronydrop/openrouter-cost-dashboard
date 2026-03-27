@@ -1,5 +1,10 @@
 import axios from 'axios';
-import type { DashboardSummary, TimeSeriesData, ModelMetrics, Insight, CurrencyInfo, OpenRouterCredits, ApiResponse, SyncResponse, DashboardStatus, RangeOption, SyncStatus } from '../types';
+import type { 
+  DashboardSummary, TimeSeriesData, ModelMetrics, Insight, CurrencyInfo, 
+  OpenRouterCredits, ApiResponse, SyncResponse, DashboardStatus, RangeOption, 
+  SyncStatus, ProviderMetrics, ApiKeyMetrics, HourlyMetrics, TokenMetrics,
+  ExtendedDashboardData 
+} from '../types';
 
 const api = axios.create({
   baseURL: '/api',
@@ -59,8 +64,38 @@ export const apiService = {
     return response.data;
   },
 
+  async getProviderMetrics(range: string): Promise<ApiResponse<ProviderMetrics[]>> {
+    const response = await api.get<ApiResponse<ProviderMetrics[]>>('/dashboard/providers', { params: { range } });
+    return response.data;
+  },
+
+  async getApiKeyMetrics(range: string): Promise<ApiResponse<ApiKeyMetrics[]>> {
+    const response = await api.get<ApiResponse<ApiKeyMetrics[]>>('/dashboard/apikeys', { params: { range } });
+    return response.data;
+  },
+
+  async getHourlyMetrics(range: string): Promise<ApiResponse<HourlyMetrics[]>> {
+    const response = await api.get<ApiResponse<HourlyMetrics[]>>('/dashboard/hourly', { params: { range } });
+    return response.data;
+  },
+
+  async getTokenMetrics(range: string): Promise<ApiResponse<TokenMetrics>> {
+    const response = await api.get<ApiResponse<TokenMetrics>>('/dashboard/tokens', { params: { range } });
+    return response.data;
+  },
+
+  async getExtendedDashboard(range: string): Promise<ApiResponse<ExtendedDashboardData>> {
+    const response = await api.get<ApiResponse<ExtendedDashboardData>>('/dashboard/extended', { params: { range } });
+    return response.data;
+  },
+
   async getInsights(range: string): Promise<ApiResponse<Insight[]>> {
     const response = await api.get<ApiResponse<Insight[]>>('/dashboard/insights', { params: { range } });
+    return response.data;
+  },
+
+  async clearCache(): Promise<{ success: boolean }> {
+    const response = await api.post<{ success: boolean }>('/dashboard/cache/clear');
     return response.data;
   },
 
