@@ -18,10 +18,10 @@ interface SpendOverTimeChartProps {
 export function SpendOverTimeChart({ data, loading }: SpendOverTimeChartProps) {
   if (loading) {
     return (
-      <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 p-6">
+      <div className="bg-[#161616] border border-[#2a2a2a] rounded-2xl p-6">
         <div className="animate-pulse">
-          <div className="h-6 bg-gray-200 dark:bg-gray-700 rounded w-1/3 mb-4"></div>
-          <div className="h-80 bg-gray-200 dark:bg-gray-700 rounded"></div>
+          <div className="h-6 bg-[#1c1c1e] rounded w-1/3 mb-4"></div>
+          <div className="h-80 bg-[#1c1c1e] rounded-xl"></div>
         </div>
       </div>
     );
@@ -29,9 +29,9 @@ export function SpendOverTimeChart({ data, loading }: SpendOverTimeChartProps) {
 
   if (!data?.daily.length) {
     return (
-      <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 p-6">
-        <h3 className="text-lg font-semibold text-gray-800 dark:text-white mb-4">Gasto ao Longo do Tempo</h3>
-        <div className="h-80 flex items-center justify-center text-gray-500 dark:text-gray-400">
+      <div className="bg-[#161616] border border-[#2a2a2a] rounded-2xl p-6">
+        <h3 className="text-lg font-semibold text-white mb-4">Gasto ao Longo do Tempo</h3>
+        <div className="h-80 flex items-center justify-center text-gray-500">
           Nenhum dado disponível para o período selecionado
         </div>
       </div>
@@ -54,17 +54,25 @@ export function SpendOverTimeChart({ data, loading }: SpendOverTimeChartProps) {
     if (active && payload && payload.length) {
       const chartPayload = payload[0];
       return (
-        <div className="bg-white dark:bg-slate-800 p-3 border border-gray-200 dark:border-slate-700 rounded-lg shadow-lg">
-          <p className="font-semibold text-gray-800 dark:text-white">{chartPayload.payload.fullDate}</p>
-          <p className="text-primary-600 dark:text-primary-400">
-            {formatCurrency(chartPayload.payload.USD)} ({formatCurrencyBrl(chartPayload.payload.BRL)})
-          </p>
-          <p className="text-gray-500 dark:text-gray-400 text-sm">
-            Requests: {chartPayload.payload.Requests.toLocaleString()}
-          </p>
-          <p className="text-gray-500 dark:text-gray-400 text-sm">
-            Tokens: {chartPayload.payload.Tokens.toLocaleString()}
-          </p>
+        <div className="bg-[#1c1c1e] p-4 border border-[#3a3a3a] rounded-xl shadow-2xl min-w-[180px]">
+          <p className="font-semibold text-white text-sm mb-3">{chartPayload.payload.fullDate}</p>
+          <div className="space-y-2">
+            <div>
+              <p className="text-gray-400 text-xs mb-1">Custo</p>
+              <p className="text-white font-semibold">{formatCurrency(chartPayload.payload.USD)}</p>
+              <p className="text-gray-500 text-xs">{formatCurrencyBrl(chartPayload.payload.BRL)}</p>
+            </div>
+            <div className="pt-2 border-t border-[#2a2a2a]">
+              <div className="flex justify-between text-xs">
+                <span className="text-gray-500">Requests:</span>
+                <span className="text-gray-300">{chartPayload.payload.Requests.toLocaleString()}</span>
+              </div>
+              <div className="flex justify-between text-xs mt-1">
+                <span className="text-gray-500">Tokens:</span>
+                <span className="text-gray-300">{chartPayload.payload.Tokens.toLocaleString()}</span>
+              </div>
+            </div>
+          </div>
         </div>
       );
     }
@@ -72,39 +80,41 @@ export function SpendOverTimeChart({ data, loading }: SpendOverTimeChartProps) {
   };
 
   return (
-    <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 p-6">
-      <div className="flex items-center justify-between mb-4">
-        <h3 className="text-lg font-semibold text-gray-800 dark:text-white">Gasto ao Longo do Tempo</h3>
-        <div className="text-sm text-gray-500 dark:text-gray-400">
-          Total: <span className="font-semibold text-primary-600 dark:text-primary-400">{formatCurrency(totalCostUsd)} ({formatCurrencyBrl(totalCostBrl)})</span>
+    <div className="bg-[#161616] border border-[#2a2a2a] rounded-2xl p-6">
+      <div className="flex items-center justify-between mb-6">
+        <h3 className="text-lg font-semibold text-white">Gasto ao Longo do Tempo</h3>
+        <div className="text-sm text-gray-400">
+          Total: <span className="font-semibold text-[#3b82f6]">{formatCurrency(totalCostUsd)} ({formatCurrencyBrl(totalCostBrl)})</span>
         </div>
       </div>
       <ResponsiveContainer width="100%" height={320}>
         <AreaChart data={chartData}>
           <defs>
             <linearGradient id="colorCost" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="5%" stopColor="#0ea5e9" stopOpacity={0.3} />
-              <stop offset="95%" stopColor="#0ea5e9" stopOpacity={0} />
+              <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3} />
+              <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
             </linearGradient>
           </defs>
-          <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" className="dark:stroke-slate-700" />
+          <CartesianGrid strokeDasharray="3 3" stroke="#2a2a2a" vertical={false} />
           <XAxis 
             dataKey="date" 
-            stroke="#9ca3af"
+            stroke="#525252"
             fontSize={12}
             tickLine={false}
+            axisLine={false}
           />
           <YAxis 
-            stroke="#9ca3af"
+            stroke="#525252"
             fontSize={12}
             tickLine={false}
-            tickFormatter={(value) => `$ ${value.toFixed(2)}`}
+            axisLine={false}
+            tickFormatter={(value) => `$ ${value.toFixed(0)}`}
           />
           <Tooltip content={<CustomTooltip />} />
           <Area
             type="monotone"
             dataKey="USD"
-            stroke="#0ea5e9"
+            stroke="#3b82f6"
             strokeWidth={2}
             fillOpacity={1}
             fill="url(#colorCost)"

@@ -9,7 +9,6 @@ import {
   Cell,
   PieChart,
   Pie,
-  Legend,
 } from 'recharts';
 import { formatCurrency, formatCurrencyBrl, formatPercent } from '../utils/formatters';
 import type { ModelMetrics } from '../types';
@@ -20,21 +19,21 @@ interface SpendByModelChartProps {
 }
 
 const COLORS = [
-  '#0ea5e9', '#8b5cf6', '#ec4899', '#f59e0b', '#10b981',
-  '#6366f1', '#14b8a6', '#f97316', '#84cc16', '#06b6d4',
+  '#3b82f6', '#22c55e', '#f59e0b', '#ef4444', '#8b5cf6',
+  '#ec4899', '#06b6d4', '#84cc16', '#f97316', '#14b8a6',
 ];
 
 export function SpendByModelChart({ data, loading }: SpendByModelChartProps) {
   if (loading) {
     return (
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 p-6 animate-pulse">
-          <div className="h-6 bg-gray-200 dark:bg-gray-700 rounded w-1/3 mb-4"></div>
-          <div className="h-64 bg-gray-200 dark:bg-gray-700 rounded"></div>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <div className="bg-[#161616] border border-[#2a2a2a] rounded-2xl p-6 animate-pulse">
+          <div className="h-6 bg-[#1c1c1e] rounded w-1/3 mb-4"></div>
+          <div className="h-64 bg-[#1c1c1e] rounded-xl"></div>
         </div>
-        <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 p-6 animate-pulse">
-          <div className="h-6 bg-gray-200 dark:bg-gray-700 rounded w-1/3 mb-4"></div>
-          <div className="h-64 bg-gray-200 dark:bg-gray-700 rounded"></div>
+        <div className="bg-[#161616] border border-[#2a2a2a] rounded-2xl p-6 animate-pulse">
+          <div className="h-6 bg-[#1c1c1e] rounded w-1/3 mb-4"></div>
+          <div className="h-64 bg-[#1c1c1e] rounded-xl"></div>
         </div>
       </div>
     );
@@ -42,16 +41,16 @@ export function SpendByModelChart({ data, loading }: SpendByModelChartProps) {
 
   if (!data?.length) {
     return (
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 p-6">
-          <h3 className="text-lg font-semibold text-gray-800 dark:text-white mb-4">Gasto por Modelo</h3>
-          <div className="h-64 flex items-center justify-center text-gray-500 dark:text-gray-400">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <div className="bg-[#161616] border border-[#2a2a2a] rounded-2xl p-6">
+          <h3 className="text-lg font-semibold text-white mb-4">Gasto por Modelo</h3>
+          <div className="h-64 flex items-center justify-center text-gray-500">
             Nenhum dado disponível
           </div>
         </div>
-        <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 p-6">
-          <h3 className="text-lg font-semibold text-gray-800 dark:text-white mb-4">Distribuição por Modelo</h3>
-          <div className="h-64 flex items-center justify-center text-gray-500 dark:text-gray-400">
+        <div className="bg-[#161616] border border-[#2a2a2a] rounded-2xl p-6">
+          <h3 className="text-lg font-semibold text-white mb-4">Distribuição por Modelo</h3>
+          <div className="h-64 flex items-center justify-center text-gray-500">
             Nenhum dado disponível
           </div>
         </div>
@@ -83,14 +82,21 @@ export function SpendByModelChart({ data, loading }: SpendByModelChartProps) {
     if (active && payload && payload.length) {
       const chartData = payload[0].payload;
       return (
-        <div className="bg-white dark:bg-slate-800 p-3 border border-gray-200 dark:border-slate-700 rounded-lg shadow-lg">
-          <p className="font-semibold text-gray-800 dark:text-white mb-1">{chartData.fullName}</p>
-          <p className="text-primary-600 dark:text-primary-400">
-            {formatCurrency(chartData.value)} ({formatCurrencyBrl(chartData.valueBrl)})
-          </p>
-          <p className="text-gray-500 dark:text-gray-400 text-sm">
-            Participação: {formatPercent(chartData.percent)}
-          </p>
+        <div className="bg-[#1c1c1e] p-4 border border-[#3a3a3a] rounded-xl shadow-2xl min-w-[200px]">
+          <p className="font-semibold text-white text-sm mb-3 truncate max-w-[250px]">{chartData.fullName}</p>
+          <div className="space-y-2">
+            <div>
+              <p className="text-gray-400 text-xs mb-1">Custo</p>
+              <p className="text-white font-semibold">{formatCurrency(chartData.value)}</p>
+              <p className="text-gray-500 text-xs">{formatCurrencyBrl(chartData.valueBrl)}</p>
+            </div>
+            <div className="pt-2 border-t border-[#2a2a2a]">
+              <div className="flex justify-between text-xs">
+                <span className="text-gray-500">Participação:</span>
+                <span className="text-gray-300">{formatPercent(chartData.percent)}</span>
+              </div>
+            </div>
+          </div>
         </div>
       );
     }
@@ -98,28 +104,31 @@ export function SpendByModelChart({ data, loading }: SpendByModelChartProps) {
   };
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-      <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 p-6">
-        <h3 className="text-lg font-semibold text-gray-800 dark:text-white mb-4">Gasto por Modelo (Top 10)</h3>
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+      <div className="bg-[#161616] border border-[#2a2a2a] rounded-2xl p-6">
+        <h3 className="text-lg font-semibold text-white mb-6">Gasto por Modelo (Top 10)</h3>
         <ResponsiveContainer width="100%" height={280}>
           <BarChart data={barData} layout="vertical">
-            <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" className="dark:stroke-slate-700" />
+            <CartesianGrid strokeDasharray="3 3" stroke="#2a2a2a" horizontal={false} />
             <XAxis 
               type="number" 
-              stroke="#9ca3af"
+              stroke="#525252"
               fontSize={11}
-              tickFormatter={(value) => `$ ${value.toFixed(2)}`}
+              tickFormatter={(value) => `$ ${value.toFixed(0)}`}
+              tickLine={false}
+              axisLine={false}
             />
             <YAxis 
               type="category" 
               dataKey="name" 
-              stroke="#9ca3af"
-              fontSize={10}
+              stroke="#a3a3a3"
+              fontSize={11}
               width={100}
               tickLine={false}
+              axisLine={false}
             />
-            <Tooltip content={<CustomTooltip />} />
-            <Bar dataKey="value" radius={[0, 4, 4, 0]}>
+            <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(255, 255, 255, 0.05)' }} />
+            <Bar dataKey="value" radius={[0, 6, 6, 0]}>
               {barData.map((_, index) => (
                 <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
               ))}
@@ -128,28 +137,25 @@ export function SpendByModelChart({ data, loading }: SpendByModelChartProps) {
         </ResponsiveContainer>
       </div>
 
-      <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 p-6">
-        <h3 className="text-lg font-semibold text-gray-800 dark:text-white mb-4">Distribuição por Modelo</h3>
+      <div className="bg-[#161616] border border-[#2a2a2a] rounded-2xl p-6">
+        <h3 className="text-lg font-semibold text-white mb-6">Distribuição por Modelo</h3>
         <ResponsiveContainer width="100%" height={280}>
           <PieChart>
             <Pie
               data={pieData}
               cx="50%"
               cy="50%"
-              innerRadius={50}
+              innerRadius={60}
               outerRadius={90}
-              paddingAngle={2}
+              paddingAngle={3}
               dataKey="value"
+              stroke="none"
             >
               {pieData.map((_, index) => (
                 <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
               ))}
             </Pie>
             <Tooltip content={<CustomTooltip />} />
-            <Legend
-              formatter={(value: string) => <span className="text-xs text-gray-600 dark:text-gray-400">{value}</span>}
-              wrapperStyle={{ fontSize: 10 }}
-            />
           </PieChart>
         </ResponsiveContainer>
       </div>

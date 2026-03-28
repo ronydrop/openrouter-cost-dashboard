@@ -28,28 +28,41 @@ export class AggregationService {
     const cacheKey = getDashboardCacheKey('summary', rangeStr);
 
     return withCache(cacheKey, async () => {
-      // Buscar TODOS os dados dos últimos 30 dias para calcular today/7d/30d
-      const allRange30 = parseRange('last30days');
+      // Buscar atividades do range solicitado
       const activities = await this.getActivitiesForRange(range);
-      const all30Activities = rangeStr === 'last30days' ? activities : await this.getActivitiesForRange(allRange30);
+      
+      // Buscar atividades dos últimos 30 dias para calcular todayCost de forma consistente
+      const last30Range = parseRange('last30days');
+      const last30Activities = await this.getActivitiesForRange(last30Range);
+      
       const currencyInfo = await getExchangeRate();
       const rate = currencyInfo.rate;
 
       // O /activity da OpenRouter retorna dados diários agregados por UTC.
       // Dados do dia atual (hoje) só aparecem no dia seguinte.
       // Usamos o dia mais recente disponível no banco como referência de "hoje".
-      const allDates = activities
+      const allDates = last30Activities
         .map(a => dayjs(a.timestamp).utc().format('YYYY-MM-DD'))
         .filter(Boolean);
 
       const latestDataDate = allDates.length > 0
         ? allDates.reduce((a, b) => a > b ? a : b)
-        : dayjs().utc().format('YYYY-MM-DD');
+        : dayjs().utc().subtract(1, 'day').format('YYYY-MM-DD');
 
       const sevenDaysBack = dayjs(latestDataDate).subtract(6, 'day').format('YYYY-MM-DD');
       const thirtyDaysBack = dayjs(latestDataDate).subtract(29, 'day').format('YYYY-MM-DD');
 
-      let totalCostUsd = 0, todayCostUsd = 0, last7DaysCostUsd = 0, last30DaysCostUsd = 0;
+      // Calcular todayCostUsd sempre com base no dia mais recente (independente do range)
+      let todayCostUsd = 0;
+      for (const activity of last30Activities) {
+        if (activity.costUsd <= 0) continue;
+        const date = dayjs(activity.timestamp).utc().format('YYYY-MM-DD');
+        if (date === latestDataDate) {
+          todayCostUsd += activity.costUsd;
+        }
+      }
+
+      let totalCostUsd = 0, last7DaysCostUsd = 0, last30DaysCostUsd = 0;
       let totalRequests = 0, totalTokens = 0;
       const daysWithData = new Set<string>();
 
@@ -61,8 +74,6 @@ export class AggregationService {
         totalTokens += activity.totalTokens;
         daysWithData.add(date);
 
-        // "hoje" = dia mais recente com dados disponíveis
-        if (date === latestDataDate) todayCostUsd += activity.costUsd;
         if (date >= sevenDaysBack) last7DaysCostUsd += activity.costUsd;
         if (date >= thirtyDaysBack) last30DaysCostUsd += activity.costUsd;
       }

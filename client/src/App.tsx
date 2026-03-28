@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { DashboardHeader, SummaryCards, SpendOverTimeChart, SpendByModelChart, InsightCard, ModelCostTable, SyncButton } from './components';
 import { useDashboardSummary, useTimeSeries, useModelMetrics, useInsights, useSyncData, useProviderMetrics, useApiKeyMetrics, useTokenMetrics } from './hooks/useDashboard';
+import { useAutoSync } from './hooks/useAutoSync';
 import { apiService } from './services/api';
 import type { DateRange } from './types';
 import { 
@@ -10,7 +11,7 @@ import {
 
 const queryClient = new QueryClient({ defaultOptions: { queries: { refetchOnWindowFocus: false, retry: 1 } } });
 
-const COLORS = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899', '#06B6D4', '#84CC16'];
+const COLORS = ['#3b82f6', '#22c55e', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#06b6d4', '#84cc16'];
 
 function Dashboard() {
   const [selectedRange, setSelectedRange] = useState<DateRange>('last30days');
@@ -37,6 +38,19 @@ function Dashboard() {
   const tokenMetrics = tokenMetricsResponse?.data;
   const syncMutation = useSyncData();
 
+  const { lastSyncAt, nextSyncAt, isSyncing: isAutoSyncing, isInitialSync, autoSyncEnabled, toggleAutoSync, triggerSync } = useAutoSync(rangeToUse, {
+    onSyncComplete: (success, recordsSynced) => {
+      if (success) {
+        setHasData(recordsSynced !== undefined && recordsSynced > 0);
+      }
+    },
+    onSyncError: (error) => {
+      setSyncError(error);
+    },
+  });
+
+  const isAnySyncing = syncMutation.isPending || isAutoSyncing;
+
   useEffect(() => {
     apiService.getDashboardStatus().then((status) => {
       setHasData(status.hasData);
@@ -52,9 +66,7 @@ function Dashboard() {
   const handleSync = async () => {
     setSyncError(null);
     try {
-      const result = await syncMutation.mutateAsync(selectedRange === 'custom' ? customDateRange.start.split('T')[0] + ',' + customDateRange.end.split('T')[0] : selectedRange);
-      if (!result.success) setSyncError(result.message);
-      else setHasData(result.records_synced > 0);
+      await triggerSync();
     } catch (error: any) { setSyncError(error.message || 'Sync failed'); }
   };
 
@@ -80,7 +92,6 @@ function Dashboard() {
     }
   };
 
-  // Provider chart data
   const providerChartData = providerMetrics?.map((p, i) => ({
     name: p.provider,
     value: p.totalCostUsd,
@@ -89,7 +100,6 @@ function Dashboard() {
     color: COLORS[i % COLORS.length],
   })) || [];
 
-  // API Key chart data
   const apiKeyChartData = apiKeyMetrics?.map((k, i) => ({
     name: k.api_key_name,
     value: k.totalCostUsd,
@@ -99,43 +109,123 @@ function Dashboard() {
   })) || [];
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-slate-900">
+    <div className="min-h-screen bg-[#0a0a0a] text-gray-100">
       <DashboardHeader />
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <section className="mb-6"><SyncButton onSync={handleSync} isSyncing={syncMutation.isPending} hasData={hasData} error={syncError} selectedRange={selectedRange} onRangeChange={handleRangeChange} customDateRange={customDateRange} onCustomDateRangeChange={setCustomDateRange} /></section>
-        <section className="mb-8"><SummaryCards data={summary} loading={summaryLoading} /></section>
-        <section className="mb-8"><SpendOverTimeChart data={timeSeries} loading={timeSeriesLoading} /></section>
+      <main className="max-w-7xl mx-auto px-6 py-8">
+        <section className="mb-8">
+          <SyncButton 
+            onSync={handleSync} 
+            isSyncing={isAnySyncing} 
+            hasData={hasData} 
+            error={syncError} 
+            lastSync={lastSyncAt}
+            nextSync={nextSyncAt}
+            isInitialSync={isInitialSync}
+            autoSyncEnabled={autoSyncEnabled}
+            onToggleAutoSync={toggleAutoSync}
+            selectedRange={selectedRange} 
+            onRangeChange={handleRangeChange} 
+            customDateRange={customDateRange} 
+            onCustomDateRangeChange={setCustomDateRange} 
+          />
+        </section>
         
         <section className="mb-8">
-          <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 p-6">
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Gastos por Fornecedor</h3>
+          <SummaryCards data={summary} loading={summaryLoading} />
+        </section>
+        
+        <section className="mb-8">
+          <SpendOverTimeChart data={timeSeries} loading={timeSeriesLoading} />
+        </section>
+        
+        <section className="mb-8">
+          <div className="bg-[#161616] border border-[#2a2a2a] rounded-2xl p-6">
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-lg font-semibold text-white">Gastos por Fornecedor</h3>
+            </div>
             {providerLoading ? (
-              <div className="h-64 bg-gray-100 dark:bg-slate-700 animate-pulse rounded"></div>
+              <div className="h-64 bg-[#1c1c1e] animate-pulse rounded-xl"></div>
             ) : providerChartData.length > 0 ? (
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 <div className="h-64">
                   <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
-                      <Pie data={providerChartData} cx="50%" cy="50%" innerRadius={50} outerRadius={80} paddingAngle={2} dataKey="value" label={({ name, percent }) => `${name} (${percent.toFixed(1)}%)`}>
+                      <Pie 
+                        data={providerChartData} 
+                        cx="50%" 
+                        cy="50%" 
+                        innerRadius={60} 
+                        outerRadius={90} 
+                        paddingAngle={3} 
+                        dataKey="value"
+                        stroke="none"
+                      >
                         {providerChartData.map((entry, index) => <Cell key={`cell-${index}`} fill={entry.color} />)}
                       </Pie>
-                      <Tooltip formatter={(value: number, _name: string, props: { payload?: { valueBrl?: number } }) => {
-                        const brl = props.payload?.valueBrl ?? value;
-                        return [`$ ${value.toFixed(2)} (R$ ${brl.toFixed(2)})`, 'Custo'];
-                      }} />
+                      <Tooltip
+                        contentStyle={{
+                          backgroundColor: '#1c1c1e',
+                          border: '1px solid #3a3a3a',
+                          borderRadius: '12px',
+                          padding: '12px 16px',
+                          boxShadow: '0 4px 24px rgba(0, 0, 0, 0.4)',
+                          color: '#ffffff'
+                        }}
+                        itemStyle={{
+                          color: '#a3a3a3',
+                          fontSize: '13px',
+                          fontWeight: 500
+                        }}
+                        formatter={(value: number, _name: string, props: { payload?: { valueBrl?: number; name?: string } }) => {
+                          const brl = props.payload?.valueBrl ?? value;
+                          const name = props.payload?.name ?? '';
+                          return [
+                            <div>
+                              <div style={{ color: '#ffffff', fontWeight: 600, marginBottom: '4px' }}>
+                                ${value.toFixed(2)}
+                              </div>
+                              <div style={{ color: '#a3a3a3', fontSize: '12px' }}>
+                                R$ {brl.toFixed(2)}
+                              </div>
+                            </div>,
+                            name
+                          ];
+                        }}
+                      />
                     </PieChart>
                   </ResponsiveContainer>
                 </div>
                 <div className="h-64">
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={providerChartData} layout="vertical">
-                      <XAxis type="number" tickFormatter={(v) => `$ ${v.toFixed(2)}`} />
-                      <YAxis type="category" dataKey="name" width={80} />
-                      <Tooltip formatter={(value: number, _name: string, props: { payload?: { valueBrl?: number } }) => {
-                        const brl = props.payload?.valueBrl ?? value;
-                        return [`$ ${value.toFixed(2)} (R$ ${brl.toFixed(2)})`, 'Custo'];
-                      }} />
-                      <Bar dataKey="value" radius={[0, 4, 4, 0]}>
+                      <XAxis type="number" tickFormatter={(v) => `$ ${v.toFixed(0)}`} stroke="#525252" fontSize={11} />
+                      <YAxis type="category" dataKey="name" width={100} stroke="#a3a3a3" fontSize={12} tickLine={false} />
+                      <Tooltip
+                        contentStyle={{
+                          backgroundColor: '#1c1c1e',
+                          border: '1px solid #3a3a3a',
+                          borderRadius: '12px',
+                          padding: '12px 16px',
+                          boxShadow: '0 4px 24px rgba(0, 0, 0, 0.4)',
+                          color: '#ffffff'
+                        }}
+                        cursor={{ fill: 'rgba(255, 255, 255, 0.05)' }}
+                        formatter={(value: number, _name: string, props: { payload?: { valueBrl?: number } }) => {
+                          const brl = props.payload?.valueBrl ?? value;
+                          return [
+                            <div>
+                              <div style={{ color: '#ffffff', fontWeight: 600, marginBottom: '4px' }}>
+                                ${value.toFixed(2)}
+                              </div>
+                              <div style={{ color: '#a3a3a3', fontSize: '12px' }}>
+                                R$ {brl.toFixed(2)}
+                              </div>
+                            </div>,
+                            'Custo'
+                          ];
+                        }}
+                      />
+                      <Bar dataKey="value" radius={[0, 6, 6, 0]}>
                         {providerChartData.map((entry, index) => <Cell key={`cell-${index}`} fill={entry.color} />)}
                       </Bar>
                     </BarChart>
@@ -143,41 +233,68 @@ function Dashboard() {
                 </div>
               </div>
             ) : (
-              <div className="h-64 flex items-center justify-center text-gray-500 dark:text-gray-400">Sem dados disponíveis</div>
+              <div className="h-64 flex items-center justify-center text-gray-500">Sem dados disponíveis</div>
             )}
           </div>
         </section>
 
         <section className="mb-8">
-          <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 p-6">
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Gastos por API Key</h3>
+          <div className="bg-[#161616] border border-[#2a2a2a] rounded-2xl p-6">
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-lg font-semibold text-white">Gastos por API Key</h3>
+            </div>
             {apiKeyLoading ? (
-              <div className="h-64 bg-gray-100 dark:bg-slate-700 animate-pulse rounded"></div>
+              <div className="h-64 bg-[#1c1c1e] animate-pulse rounded-xl"></div>
             ) : apiKeyChartData.length > 0 ? (
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 <div className="h-64">
                   <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
-                      <Pie data={apiKeyChartData} cx="50%" cy="50%" innerRadius={50} outerRadius={80} paddingAngle={2} dataKey="value" label={({ name, percent }) => `${name} (${percent.toFixed(1)}%)`}>
+                      <Pie 
+                        data={apiKeyChartData} 
+                        cx="50%" 
+                        cy="50%" 
+                        innerRadius={60} 
+                        outerRadius={90} 
+                        paddingAngle={3} 
+                        dataKey="value"
+                        stroke="none"
+                      >
                         {apiKeyChartData.map((entry, index) => <Cell key={`cell-${index}`} fill={entry.color} />)}
                       </Pie>
-                      <Tooltip formatter={(value: number, _name: string, props: { payload?: { valueBrl?: number } }) => {
-                        const brl = props.payload?.valueBrl ?? value;
-                        return [`$ ${value.toFixed(2)} (R$ ${brl.toFixed(2)})`, 'Custo'];
-                      }} />
+                      <Tooltip 
+                        contentStyle={{ 
+                          backgroundColor: '#1c1c1e', 
+                          border: '1px solid #2a2a2a', 
+                          borderRadius: '8px',
+                          color: '#e5e5e5'
+                        }}
+                        formatter={(value: number, _name: string, props: { payload?: { valueBrl?: number } }) => {
+                          const brl = props.payload?.valueBrl ?? value;
+                          return [`$ ${value.toFixed(2)} (R$ ${brl.toFixed(2)})`, 'Custo'];
+                        }} 
+                      />
                     </PieChart>
                   </ResponsiveContainer>
                 </div>
                 <div className="h-64">
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={apiKeyChartData} layout="vertical">
-                      <XAxis type="number" tickFormatter={(v) => `$ ${v.toFixed(2)}`} />
-                      <YAxis type="category" dataKey="name" width={100} />
-                      <Tooltip formatter={(value: number, _name: string, props: { payload?: { valueBrl?: number } }) => {
-                        const brl = props.payload?.valueBrl ?? value;
-                        return [`$ ${value.toFixed(2)} (R$ ${brl.toFixed(2)})`, 'Custo'];
-                      }} />
-                      <Bar dataKey="value" radius={[0, 4, 4, 0]}>
+                      <XAxis type="number" tickFormatter={(v) => `$ ${v.toFixed(0)}`} stroke="#525252" fontSize={11} />
+                      <YAxis type="category" dataKey="name" width={120} stroke="#a3a3a3" fontSize={12} tickLine={false} />
+                      <Tooltip 
+                        contentStyle={{ 
+                          backgroundColor: '#1c1c1e', 
+                          border: '1px solid #2a2a2a', 
+                          borderRadius: '8px',
+                          color: '#e5e5e5'
+                        }}
+                        formatter={(value: number, _name: string, props: { payload?: { valueBrl?: number } }) => {
+                          const brl = props.payload?.valueBrl ?? value;
+                          return [`$ ${value.toFixed(2)} (R$ ${brl.toFixed(2)})`, 'Custo'];
+                        }} 
+                      />
+                      <Bar dataKey="value" radius={[0, 6, 6, 0]}>
                         {apiKeyChartData.map((entry, index) => <Cell key={`cell-${index}`} fill={entry.color} />)}
                       </Bar>
                     </BarChart>
@@ -185,52 +302,61 @@ function Dashboard() {
                 </div>
               </div>
             ) : (
-              <div className="h-64 flex items-center justify-center text-gray-500 dark:text-gray-400">Sem dados disponíveis</div>
+              <div className="h-64 flex items-center justify-center text-gray-500">Sem dados disponíveis</div>
             )}
           </div>
         </section>
 
         {tokenMetrics && tokenMetrics.totalTokens > 0 && (
           <section className="mb-8">
-            <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 p-6">
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Métricas de Tokens</h3>
+            <div className="bg-[#161616] border border-[#2a2a2a] rounded-2xl p-6">
+              <h3 className="text-lg font-semibold text-white mb-6">Métricas de Tokens</h3>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <div className="bg-blue-50 dark:bg-blue-900/30 rounded-lg p-4">
-                  <p className="text-sm text-blue-600 dark:text-blue-400">Prompt Tokens</p>
-                  <p className="text-xl font-bold text-blue-900 dark:text-blue-200">{tokenMetrics.totalPromptTokens.toLocaleString()}</p>
-                  <p className="text-xs text-blue-500 dark:text-blue-500">{tokenMetrics.promptPercent.toFixed(1)}%</p>
+                <div className="bg-[#1c1c1e] border border-[#2a2a2a] rounded-xl p-5">
+                  <p className="text-sm text-gray-400 mb-2">Prompt Tokens</p>
+                  <p className="text-2xl font-semibold text-blue-400">{tokenMetrics.totalPromptTokens.toLocaleString()}</p>
+                  <p className="text-xs text-gray-500 mt-1">{tokenMetrics.promptPercent.toFixed(1)}%</p>
                 </div>
-                <div className="bg-green-50 dark:bg-green-900/30 rounded-lg p-4">
-                  <p className="text-sm text-green-600 dark:text-green-400">Completion Tokens</p>
-                  <p className="text-xl font-bold text-green-900 dark:text-green-200">{tokenMetrics.totalCompletionTokens.toLocaleString()}</p>
-                  <p className="text-xs text-green-500 dark:text-green-500">{tokenMetrics.completionPercent.toFixed(1)}%</p>
+                <div className="bg-[#1c1c1e] border border-[#2a2a2a] rounded-xl p-5">
+                  <p className="text-sm text-gray-400 mb-2">Completion Tokens</p>
+                  <p className="text-2xl font-semibold text-green-400">{tokenMetrics.totalCompletionTokens.toLocaleString()}</p>
+                  <p className="text-xs text-gray-500 mt-1">{tokenMetrics.completionPercent.toFixed(1)}%</p>
                 </div>
-                <div className="bg-purple-50 dark:bg-purple-900/30 rounded-lg p-4">
-                  <p className="text-sm text-purple-600 dark:text-purple-400">Reasoning Tokens</p>
-                  <p className="text-xl font-bold text-purple-900 dark:text-purple-200">{tokenMetrics.totalReasoningTokens.toLocaleString()}</p>
-                  <p className="text-xs text-purple-500 dark:text-purple-500">Chain-of-thought</p>
+                <div className="bg-[#1c1c1e] border border-[#2a2a2a] rounded-xl p-5">
+                  <p className="text-sm text-gray-400 mb-2">Reasoning Tokens</p>
+                  <p className="text-2xl font-semibold text-purple-400">{tokenMetrics.totalReasoningTokens.toLocaleString()}</p>
+                  <p className="text-xs text-gray-500 mt-1">Chain-of-thought</p>
                 </div>
-                <div className="bg-amber-50 dark:bg-amber-900/30 rounded-lg p-4">
-                  <p className="text-sm text-amber-600 dark:text-amber-400">Cached Tokens</p>
-                  <p className="text-xl font-bold text-amber-900 dark:text-amber-200">{tokenMetrics.totalCachedTokens.toLocaleString()}</p>
-                  <p className="text-xs text-amber-500 dark:text-amber-500">{tokenMetrics.cachedPercent.toFixed(1)}% reutilizados</p>
+                <div className="bg-[#1c1c1e] border border-[#2a2a2a] rounded-xl p-5">
+                  <p className="text-sm text-gray-400 mb-2">Cached Tokens</p>
+                  <p className="text-2xl font-semibold text-amber-400">{tokenMetrics.totalCachedTokens.toLocaleString()}</p>
+                  <p className="text-xs text-gray-500 mt-1">{tokenMetrics.cachedPercent.toFixed(1)}% reutilizados</p>
                 </div>
               </div>
-              <div className="mt-4 flex items-center">
-                <p className="text-sm text-gray-600 dark:text-gray-400 mr-2">Total:</p>
-                <p className="text-lg font-bold text-gray-900 dark:text-white">{tokenMetrics.totalTokens.toLocaleString()} tokens</p>
+              <div className="mt-6 pt-4 border-t border-[#2a2a2a] flex items-center">
+                <p className="text-sm text-gray-400 mr-2">Total:</p>
+                <p className="text-xl font-semibold text-white">{tokenMetrics.totalTokens.toLocaleString()} tokens</p>
               </div>
             </div>
           </section>
         )}
 
-        <section className="mb-8"><SpendByModelChart data={modelMetrics} loading={modelMetricsLoading} /></section>
-        <section className="mb-8"><InsightCard insights={insights} loading={insightsLoading} /></section>
-        <section className="mb-8"><h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4">Detalhes por Modelo</h2><ModelCostTable data={modelMetrics} loading={modelMetricsLoading} /></section>
+        <section className="mb-8">
+          <SpendByModelChart data={modelMetrics} loading={modelMetricsLoading} />
+        </section>
         
-        <footer className="text-center text-sm text-gray-500 dark:text-gray-400 py-8 border-t border-gray-200 dark:border-slate-700">
-          <p>OpenRouter Cost Dashboard - Análise seus gastos com IA</p>
-          <p className="mt-1">Cotação USD/BRL: R$ {summary?.exchangeRate.toFixed(4) || '5.00'} ({summary?.exchangeRateSource || 'Automática'})</p>
+        <section className="mb-8">
+          <InsightCard insights={insights} loading={insightsLoading} />
+        </section>
+        
+        <section className="mb-8">
+          <h2 className="text-xl font-semibold text-white mb-6">Detalhes por Modelo</h2>
+          <ModelCostTable data={modelMetrics} loading={modelMetricsLoading} />
+        </section>
+        
+        <footer className="text-center text-sm text-gray-500 py-8 border-t border-[#2a2a2a]">
+          <p className="text-gray-400">OpenRouter Cost Dashboard - Análise seus gastos com IA</p>
+          <p className="mt-1 text-gray-500">Cotação USD/BRL: R$ {summary?.exchangeRate.toFixed(4) || '5.00'} ({summary?.exchangeRateSource || 'Automática'})</p>
         </footer>
       </main>
     </div>

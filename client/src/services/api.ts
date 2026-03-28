@@ -22,6 +22,11 @@ export const apiService = {
     return response.data;
   },
 
+  async getSyncNeeded(): Promise<{ needsSync: boolean; reason: string; lastSyncAt: string | null; nextSyncAt: string | null }> {
+    const response = await api.get('/openrouter/sync/needed');
+    return response.data;
+  },
+
   async getDashboardStatus(): Promise<DashboardStatus> {
     const response = await api.get<DashboardStatus>('/dashboard/status');
     return response.data;

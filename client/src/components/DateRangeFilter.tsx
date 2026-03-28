@@ -12,8 +12,8 @@ interface DateRangeFilterProps {
 const ranges: { value: DateRange; label: string }[] = [
   { value: 'today', label: 'Hoje' },
   { value: 'yesterday', label: 'Ontem' },
-  { value: 'last7days', label: 'Últimos 7 dias' },
-  { value: 'last30days', label: 'Últimos 30 dias' },
+  { value: 'last7days', label: '7 dias' },
+  { value: 'last30days', label: '30 dias' },
   { value: 'currentMonth', label: 'Mês atual' },
   { value: 'previousMonth', label: 'Mês anterior' },
   { value: 'custom', label: 'Personalizado' },
@@ -26,16 +26,16 @@ export function DateRangeFilter({
   onCustomDateRangeChange 
 }: DateRangeFilterProps) {
   return (
-    <div className="flex flex-wrap items-center gap-3">
-      <div className="flex items-center bg-gray-100 rounded-lg p-1 dark:bg-slate-700">
+    <div className="flex flex-wrap items-center gap-2">
+      <div className="flex items-center bg-gray-100 dark:bg-[#1c1c1e] rounded-xl p-1 border border-gray-200 dark:border-[#2a2a2a]">
         {ranges.map((range) => (
           <button
             key={range.value}
             onClick={() => onRangeChange(range.value)}
-            className={`px-3 py-1.5 text-sm rounded-md transition-all ${
+            className={`px-3 py-1.5 text-sm rounded-lg transition-all duration-200 font-medium ${
               selectedRange === range.value
-                ? 'bg-white text-primary-600 shadow-sm font-medium dark:bg-slate-600'
-                : 'text-gray-600 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white'
+                ? 'bg-white dark:bg-[#262628] text-slate-900 dark:text-white shadow-sm'
+                : 'text-slate-500 dark:text-gray-400 hover:text-slate-900 dark:hover:text-white'
             }`}
           >
             {range.label}
@@ -45,7 +45,7 @@ export function DateRangeFilter({
       
       {selectedRange === 'custom' && onCustomDateRangeChange && (
         <div className="flex items-center gap-2">
-          <Calendar className="text-gray-400" size={18} />
+          <Calendar className="text-slate-400 dark:text-gray-500" size={16} />
           <input
             type="date"
             value={customDateRange?.start?.split('T')[0] || ''}
@@ -53,9 +53,9 @@ export function DateRangeFilter({
               ...customDateRange!, 
               start: dayjs(e.target.value).startOf('day').toISOString() 
             })}
-            className="px-3 py-1.5 border border-gray-300 rounded-lg text-sm dark:bg-slate-700 dark:border-slate-600 dark:text-white"
+            className="px-3 py-1.5 bg-white dark:bg-[#1c1c1e] border border-gray-200 dark:border-[#2a2a2a] rounded-lg text-sm text-slate-900 dark:text-white focus:outline-none focus:border-blue-500 dark:focus:border-[#3b82f6] transition-colors"
           />
-          <span className="text-gray-400">até</span>
+          <span className="text-slate-400 dark:text-gray-500">até</span>
           <input
             type="date"
             value={customDateRange?.end?.split('T')[0] || ''}
@@ -63,7 +63,7 @@ export function DateRangeFilter({
               ...customDateRange!, 
               end: dayjs(e.target.value).endOf('day').toISOString() 
             })}
-            className="px-3 py-1.5 border border-gray-300 rounded-lg text-sm dark:bg-slate-700 dark:border-slate-600 dark:text-white"
+            className="px-3 py-1.5 bg-white dark:bg-[#1c1c1e] border border-gray-200 dark:border-[#2a2a2a] rounded-lg text-sm text-slate-900 dark:text-white focus:outline-none focus:border-blue-500 dark:focus:border-[#3b82f6] transition-colors"
           />
         </div>
       )}

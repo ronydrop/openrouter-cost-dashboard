@@ -3,6 +3,7 @@ import {
   useReactTable,
   getCoreRowModel,
   getSortedRowModel,
+  getPaginationRowModel,
   flexRender,
   createColumnHelper,
   SortingState,
@@ -20,18 +21,18 @@ const columnHelper = createColumnHelper<ModelMetrics>();
 
 function ProviderBadge({ provider }: { provider: string }) {
   const colors: Record<string, string> = {
-    anthropic: 'bg-orange-100 text-orange-700 dark:bg-orange-900 dark:text-orange-200',
-    openai: 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-200',
-    google: 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-200',
-    meta: 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900 dark:text-indigo-200',
-    mistral: 'bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-200',
-    deepseek: 'bg-cyan-100 text-cyan-700 dark:bg-cyan-900 dark:text-cyan-200',
-    qwen: 'bg-teal-100 text-teal-700 dark:bg-teal-900 dark:text-teal-200',
-    xai: 'bg-slate-100 text-slate-700 dark:bg-slate-700 dark:text-slate-200',
-    cohere: 'bg-pink-100 text-pink-700 dark:bg-pink-900 dark:text-pink-200',
+    anthropic: 'bg-orange-500/10 text-orange-400',
+    openai: 'bg-green-500/10 text-green-400',
+    google: 'bg-blue-500/10 text-blue-400',
+    meta: 'bg-indigo-500/10 text-indigo-400',
+    mistral: 'bg-purple-500/10 text-purple-400',
+    deepseek: 'bg-cyan-500/10 text-cyan-400',
+    qwen: 'bg-teal-500/10 text-teal-400',
+    xai: 'bg-slate-500/10 text-slate-400',
+    cohere: 'bg-pink-500/10 text-pink-400',
   };
   const key = provider?.split('/')[0]?.toLowerCase() || '';
-  const cls = colors[key] || 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300';
+  const cls = colors[key] || 'bg-gray-500/10 text-gray-400';
   return (
     <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${cls}`}>
       {provider || 'unknown'}
@@ -43,6 +44,8 @@ export function ModelCostTable({ data, loading }: ModelCostTableProps) {
   const [sorting, setSorting] = useState<SortingState>([
     { id: 'totalCostUsd', desc: true },
   ]);
+  const [pageIndex, setPageIndex] = useState(0);
+  const [pageSize, setPageSize] = useState(15);
 
   const filteredData = useMemo(() => {
     if (!data) return [];
@@ -57,7 +60,7 @@ export function ModelCostTable({ data, loading }: ModelCostTableProps) {
         const name = parts.length > 1 ? parts.slice(1).join('/') : info.getValue();
         return (
           <div className="max-w-xs">
-            <div className="font-medium text-gray-900 dark:text-white truncate text-sm" title={info.getValue()}>
+            <div className="font-medium text-white truncate text-sm" title={info.getValue()}>
               {name}
             </div>
             <ProviderBadge provider={info.row.original.provider} />
@@ -67,33 +70,33 @@ export function ModelCostTable({ data, loading }: ModelCostTableProps) {
     }),
     columnHelper.accessor('totalRequests', {
       header: ({ column }) => (
-        <button className="flex items-center gap-1 hover:text-primary-600 dark:hover:text-primary-400" onClick={() => column.toggleSorting()}>
+        <button className="flex items-center gap-1 text-gray-400 hover:text-white transition-colors" onClick={() => column.toggleSorting()}>
           Requests
           {column.getIsSorted() === 'asc' ? <ArrowUp size={14} /> : column.getIsSorted() === 'desc' ? <ArrowDown size={14} /> : <ArrowUpDown size={14} />}
         </button>
       ),
       cell: (info) => (
-        <span className="font-mono text-sm text-gray-700 dark:text-gray-300">{formatNumber(info.getValue())}</span>
+        <span className="font-mono text-sm text-gray-400">{formatNumber(info.getValue())}</span>
       ),
     }),
     columnHelper.accessor('totalTokens', {
       header: 'Tokens',
       cell: (info) => {
         const v = info.getValue();
-        if (v >= 1_000_000) return <span className="font-mono text-sm text-gray-700 dark:text-gray-300">{(v / 1_000_000).toFixed(1)}M</span>;
-        if (v >= 1_000) return <span className="font-mono text-sm text-gray-700 dark:text-gray-300">{(v / 1_000).toFixed(1)}K</span>;
-        return <span className="font-mono text-sm text-gray-700 dark:text-gray-300">{v}</span>;
+        if (v >= 1_000_000) return <span className="font-mono text-sm text-gray-400">{(v / 1_000_000).toFixed(1)}M</span>;
+        if (v >= 1_000) return <span className="font-mono text-sm text-gray-400">{(v / 1_000).toFixed(1)}K</span>;
+        return <span className="font-mono text-sm text-gray-400">{v}</span>;
       },
     }),
     columnHelper.accessor('totalCostUsd', {
       header: ({ column }) => (
-        <button className="flex items-center gap-1 hover:text-primary-600 dark:hover:text-primary-400" onClick={() => column.toggleSorting()}>
+        <button className="flex items-center gap-1 text-gray-400 hover:text-white transition-colors" onClick={() => column.toggleSorting()}>
           Custo USD
           {column.getIsSorted() === 'asc' ? <ArrowUp size={14} /> : column.getIsSorted() === 'desc' ? <ArrowDown size={14} /> : <ArrowUpDown size={14} />}
         </button>
       ),
       cell: (info) => (
-        <span className="font-mono font-semibold text-sm text-gray-900 dark:text-white">
+        <span className="font-mono font-semibold text-sm text-white">
           {formatCurrency(info.getValue(), 'USD')}
         </span>
       ),
@@ -101,20 +104,20 @@ export function ModelCostTable({ data, loading }: ModelCostTableProps) {
     columnHelper.accessor('totalCostBrl', {
       header: 'Custo BRL',
       cell: (info) => (
-        <span className="font-mono text-sm text-gray-700 dark:text-gray-300">
+        <span className="font-mono text-sm text-gray-400">
           {formatCurrency(info.getValue(), 'BRL')}
         </span>
       ),
     }),
     columnHelper.accessor('avgCostPerRequest', {
       header: ({ column }) => (
-        <button className="flex items-center gap-1 hover:text-primary-600 dark:hover:text-primary-400" onClick={() => column.toggleSorting()}>
+        <button className="flex items-center gap-1 text-gray-400 hover:text-white transition-colors" onClick={() => column.toggleSorting()}>
           $/Request
           {column.getIsSorted() === 'asc' ? <ArrowUp size={14} /> : column.getIsSorted() === 'desc' ? <ArrowDown size={14} /> : <ArrowUpDown size={14} />}
         </button>
       ),
       cell: (info) => (
-        <span className="font-mono text-sm text-gray-700 dark:text-gray-300">
+        <span className="font-mono text-sm text-gray-400">
           ${info.getValue().toFixed(4)}
         </span>
       ),
@@ -125,13 +128,13 @@ export function ModelCostTable({ data, loading }: ModelCostTableProps) {
         const pct = info.getValue() * 100;
         return (
           <div className="flex items-center gap-2 min-w-[80px]">
-            <div className="flex-1 bg-gray-200 dark:bg-slate-600 rounded-full h-1.5">
+            <div className="flex-1 bg-[#2a2a2a] rounded-full h-1.5">
               <div
-                className="bg-primary-500 h-1.5 rounded-full"
+                className="bg-[#3b82f6] h-1.5 rounded-full"
                 style={{ width: `${Math.min(pct, 100)}%` }}
               />
             </div>
-            <span className="text-xs text-gray-600 dark:text-gray-400 whitespace-nowrap">{pct.toFixed(1)}%</span>
+            <span className="text-xs text-gray-400 whitespace-nowrap">{pct.toFixed(1)}%</span>
           </div>
         );
       },
@@ -141,19 +144,25 @@ export function ModelCostTable({ data, loading }: ModelCostTableProps) {
   const table = useReactTable({
     data: filteredData,
     columns,
-    state: { sorting },
+    state: { sorting, pagination: { pageIndex, pageSize } },
     onSortingChange: setSorting,
+    onPaginationChange: (updater) => {
+      const next = typeof updater === 'function' ? updater({ pageIndex, pageSize }) : updater;
+      setPageIndex(next.pageIndex);
+      setPageSize(next.pageSize);
+    },
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
+    getPaginationRowModel: getPaginationRowModel(),
   });
 
   if (loading) {
     return (
-      <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 p-6 animate-pulse">
-        <div className="h-6 bg-gray-200 dark:bg-gray-700 rounded w-1/3 mb-4"></div>
+      <div className="bg-[#161616] border border-[#2a2a2a] rounded-2xl p-6 animate-pulse">
+        <div className="h-6 bg-[#1c1c1e] rounded w-1/3 mb-4"></div>
         <div className="space-y-2">
           {[...Array(5)].map((_, i) => (
-            <div key={i} className="h-12 bg-gray-200 dark:bg-gray-700 rounded"></div>
+            <div key={i} className="h-12 bg-[#1c1c1e] rounded-xl"></div>
           ))}
         </div>
       </div>
@@ -162,8 +171,8 @@ export function ModelCostTable({ data, loading }: ModelCostTableProps) {
 
   if (!filteredData.length) {
     return (
-      <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 p-6 text-center py-8">
-        <p className="text-gray-500 dark:text-gray-400">Nenhum modelo utilizado no período</p>
+      <div className="bg-[#161616] border border-[#2a2a2a] rounded-2xl p-6 text-center py-12">
+        <p className="text-gray-500">Nenhum modelo utilizado no período</p>
       </div>
     );
   }
@@ -172,14 +181,14 @@ export function ModelCostTable({ data, loading }: ModelCostTableProps) {
   const totalRequests = filteredData.reduce((s, m) => s + m.totalRequests, 0);
 
   return (
-    <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 overflow-hidden">
+    <div className="bg-[#161616] border border-[#2a2a2a] rounded-2xl overflow-hidden">
       <div className="overflow-x-auto">
         <table className="w-full text-sm text-left">
-          <thead className="bg-gray-50 dark:bg-slate-700/50 sticky top-0">
+          <thead className="bg-[#1c1c1e] border-b border-[#2a2a2a]">
             {table.getHeaderGroups().map((hg) => (
               <tr key={hg.id}>
                 {hg.headers.map((header) => (
-                  <th key={header.id} className="px-4 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+                  <th key={header.id} className="px-4 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">
                     {flexRender(header.column.columnDef.header, header.getContext())}
                   </th>
                 ))}
@@ -188,37 +197,89 @@ export function ModelCostTable({ data, loading }: ModelCostTableProps) {
           </thead>
           <tbody>
             {table.getRowModel().rows.map((row, idx) => (
-              <tr key={row.id} className={`hover:bg-blue-50 dark:hover:bg-slate-700/50 transition-colors ${idx % 2 === 0 ? '' : 'bg-gray-50/50 dark:bg-slate-800/50'}`}>
+              <tr key={row.id} className={`hover:bg-[#1c1c1e] transition-colors ${idx % 2 === 0 ? '' : 'bg-[#1c1c1e]/50'}`}>
                 {row.getVisibleCells().map((cell) => (
-                  <td key={cell.id} className="px-4 py-3 border-b border-gray-100 dark:border-slate-700">
+                  <td key={cell.id} className="px-4 py-3 border-b border-[#2a2a2a]">
                     {flexRender(cell.column.columnDef.cell, cell.getContext())}
                   </td>
                 ))}
               </tr>
             ))}
           </tbody>
-          <tfoot className="bg-gray-50 dark:bg-slate-700/50 border-t-2 border-gray-200 dark:border-slate-600">
+          <tfoot className="bg-[#1c1c1e] border-t-2 border-[#2a2a2a]">
             <tr>
-              <td className="px-4 py-3 font-semibold text-sm text-gray-700 dark:text-gray-300">
+              <td className="px-4 py-3 font-semibold text-sm text-white">
                 Total ({filteredData.length} modelos)
               </td>
-              <td className="px-4 py-3 font-mono font-semibold text-sm text-gray-700 dark:text-gray-300">
+              <td className="px-4 py-3 font-mono font-semibold text-sm text-gray-400">
                 {formatNumber(totalRequests)}
               </td>
               <td className="px-4 py-3" />
-              <td className="px-4 py-3 font-mono font-bold text-sm text-gray-900 dark:text-white">
+              <td className="px-4 py-3 font-mono font-bold text-sm text-white">
                 {formatCurrency(totalCost, 'USD')}
               </td>
-              <td className="px-4 py-3 font-mono font-semibold text-sm text-gray-700 dark:text-gray-300">
+              <td className="px-4 py-3 font-mono font-semibold text-sm text-gray-400">
                 {formatCurrency(filteredData.reduce((s, m) => s + m.totalCostBrl, 0), 'BRL')}
               </td>
-              <td className="px-4 py-3 font-mono text-sm text-gray-700 dark:text-gray-300">
+              <td className="px-4 py-3 font-mono text-sm text-gray-400">
                 {formatCurrency(totalRequests > 0 ? totalCost / totalRequests : 0, 'USD')}
               </td>
               <td className="px-4 py-3" />
             </tr>
           </tfoot>
         </table>
+      </div>
+      <div className="flex items-center justify-between px-4 py-3 bg-[#1c1c1e] border-t border-[#2a2a2a]">
+        <div className="flex items-center gap-2 text-sm text-gray-400">
+          <span>Linhas por página:</span>
+          <select
+            value={pageSize}
+            onChange={(e) => {
+              setPageSize(Number(e.target.value));
+              setPageIndex(0);
+            }}
+            className="bg-[#2a2a2a] border border-[#3a3a3a] rounded px-2 py-1 text-white text-sm"
+          >
+            {[5, 10, 20, 50].map((size) => (
+              <option key={size} value={size}>{size}</option>
+            ))}
+          </select>
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="text-sm text-gray-400">
+            Página {pageIndex + 1} de {table.getPageCount() || 1}
+          </span>
+          <div className="flex gap-1">
+            <button
+              onClick={() => table.setPageIndex(0)}
+              disabled={!table.getCanPreviousPage()}
+              className="px-2 py-1 bg-[#2a2a2a] border border-[#3a3a3a] rounded text-white text-sm disabled:opacity-30 disabled:cursor-not-allowed hover:bg-[#3a3a3a] transition-colors"
+            >
+              «
+            </button>
+            <button
+              onClick={() => table.previousPage()}
+              disabled={!table.getCanPreviousPage()}
+              className="px-3 py-1 bg-[#2a2a2a] border border-[#3a3a3a] rounded text-white text-sm disabled:opacity-30 disabled:cursor-not-allowed hover:bg-[#3a3a3a] transition-colors"
+            >
+              ‹
+            </button>
+            <button
+              onClick={() => table.nextPage()}
+              disabled={!table.getCanNextPage()}
+              className="px-3 py-1 bg-[#2a2a2a] border border-[#3a3a3a] rounded text-white text-sm disabled:opacity-30 disabled:cursor-not-allowed hover:bg-[#3a3a3a] transition-colors"
+            >
+              ›
+            </button>
+            <button
+              onClick={() => table.setPageIndex(table.getPageCount() - 1)}
+              disabled={!table.getCanNextPage()}
+              className="px-2 py-1 bg-[#2a2a2a] border border-[#3a3a3a] rounded text-white text-sm disabled:opacity-30 disabled:cursor-not-allowed hover:bg-[#3a3a3a] transition-colors"
+            >
+              »
+            </button>
+          </div>
+        </div>
       </div>
     </div>
   );
