@@ -5,7 +5,7 @@ import { activityRepository } from '../repositories/ActivityRepository.js';
 import { 
   NormalizedActivityItem, DailyMetrics, ModelMetrics, DashboardSummary, 
   TimeSeriesData, Insight, ProviderMetrics, ApiKeyMetrics, HourlyMetrics,
-  EndpointMetrics, TokenMetrics, ExtendedDashboardData, ApiKeyTimeSeriesPoint
+  EndpointMetrics, TokenMetrics, ExtendedDashboardData, ApiKeyTimeSeriesPoint, ApiKeyTimeSeriesCoverage
 } from '../types.js';
 import { getExchangeRate, convertToBrl } from './exchangeRate.js';
 import { parseRange, TimeRange, getPreviousPeriod } from '../utils/dateRanges.js';
@@ -421,17 +421,34 @@ export class AggregationService {
     });
   }
 
-  async buildApiKeyTimeSeries(rangeStr: string = 'last30days'): Promise<{ data: ApiKeyTimeSeriesPoint[]; cached: boolean }> {
+  async buildApiKeyTimeSeries(rangeStr: string = 'last30days'): Promise<{ data: ApiKeyTimeSeriesPoint[]; coverage: ApiKeyTimeSeriesCoverage; cached: boolean }> {
     const range = parseRange(rangeStr);
     const cacheKey = getDashboardCacheKey('apikeys-timeseries', rangeStr);
 
-    return withCache(cacheKey, async () => {
+    const { data, cached } = await withCache(cacheKey, async (): Promise<{ data: ApiKeyTimeSeriesPoint[]; coverage: ApiKeyTimeSeriesCoverage }> => {
       const currencyInfo = await getExchangeRate();
       const rate = currencyInfo.rate;
       const rawSeries = await activityRepository.getApiKeyDailySeries(range);
+      const activities = await this.getActivitiesForRange(range);
+      const allDates = activities
+        .map((activity) => dayjs(activity.timestamp).utc().format('YYYY-MM-DD'))
+        .filter(Boolean);
+      const latestDashboardDate = allDates.length > 0
+        ? allDates.reduce((a, b) => a > b ? a : b)
+        : null;
+      const latestAvailableDate = rawSeries.length > 0 ? rawSeries[rawSeries.length - 1].date : null;
+      const missingDays = latestDashboardDate && latestAvailableDate
+        ? Math.max(dayjs(latestDashboardDate).diff(dayjs(latestAvailableDate), 'day'), 0)
+        : 0;
+      const coverage: ApiKeyTimeSeriesCoverage = {
+        latestAvailableDate,
+        latestDashboardDate,
+        isDelayed: missingDays > 0,
+        missingDays,
+      };
 
       if (!rawSeries.length) {
-        return [];
+        return { data: [], coverage };
       }
 
       const totalsByKey = new Map<string, number>();
@@ -462,8 +479,13 @@ export class AggregationService {
         point[`${row.api_key_name}__brl`] = parseFloat(convertToBrl(row.total_cost, rate).toFixed(2));
       }
 
-      return Array.from(dateMap.values()).sort((a, b) => String(a.date).localeCompare(String(b.date)));
+      return {
+        data: Array.from(dateMap.values()).sort((a, b) => String(a.date).localeCompare(String(b.date))),
+        coverage,
+      };
     });
+
+    return { data: data.data, coverage: data.coverage, cached };
   }
 
   // ============ HOURLY METRICS (Heatmap) ============

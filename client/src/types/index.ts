@@ -64,6 +64,17 @@ export interface ApiKeyTimeSeriesPoint {
   [apiKey: string]: string | number;
 }
 
+export interface ApiKeyTimeSeriesCoverage {
+  latestAvailableDate: string | null;
+  latestDashboardDate: string | null;
+  isDelayed: boolean;
+  missingDays: number;
+}
+
+export interface ApiKeyTimeSeriesResponse extends ApiResponse<ApiKeyTimeSeriesPoint[]> {
+  coverage: ApiKeyTimeSeriesCoverage;
+}
+
 export interface HourlyMetrics {
   hour: string;
   dayOfWeek: string;

@@ -12,6 +12,7 @@ export const useSyncData = () => {
       queryClient.invalidateQueries({ queryKey: ['modelMetrics'] });
       queryClient.invalidateQueries({ queryKey: ['providerMetrics'] });
       queryClient.invalidateQueries({ queryKey: ['apiKeyMetrics'] });
+      queryClient.invalidateQueries({ queryKey: ['apiKeyTimeSeries'] });
       queryClient.invalidateQueries({ queryKey: ['hourlyMetrics'] });
       queryClient.invalidateQueries({ queryKey: ['tokenMetrics'] });
       queryClient.invalidateQueries({ queryKey: ['insights'] });

@@ -69,8 +69,8 @@ router.get('/apikeys', async (req: Request, res: Response) => {
 router.get('/apikeys/timeseries', async (req: Request, res: Response) => {
   try {
     const { range = 'last30days' } = req.query;
-    const { data, cached } = await aggregationService.buildApiKeyTimeSeries(range as string);
-    res.json({ data, range: parseRange(range as string), cached, timestamp: new Date().toISOString() });
+    const { data, coverage, cached } = await aggregationService.buildApiKeyTimeSeries(range as string);
+    res.json({ data, coverage, range: parseRange(range as string), cached, timestamp: new Date().toISOString() });
   } catch (error: any) {
     console.error('Error in /api/dashboard/apikeys/timeseries:', error.message);
     res.status(500).json({ error: 'Failed to get API key time series', message: error.message });

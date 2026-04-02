@@ -8,6 +8,7 @@ import type { DateRange, ApiKeyTimeSeriesPoint } from './types';
 import { 
   PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, LineChart, Line, CartesianGrid, Legend
 } from 'recharts';
+import { AlertTriangle } from 'lucide-react';
 
 const queryClient = new QueryClient({ defaultOptions: { queries: { refetchOnWindowFocus: false, retry: 1 } } });
 
@@ -35,6 +36,7 @@ function Dashboard() {
   const providerMetrics = providerMetricsResponse?.data;
   const apiKeyMetrics = apiKeyMetricsResponse?.data;
   const apiKeyTimeSeries = apiKeyTimeSeriesResponse?.data || [];
+  const apiKeyTimeSeriesCoverage = apiKeyTimeSeriesResponse?.coverage;
   const tokenMetrics = tokenMetricsResponse?.data;
   const syncMutation = useSyncData();
 
@@ -146,6 +148,11 @@ function Dashboard() {
         </div>
       </div>
     );
+  };
+
+  const formatCoverageDate = (date: string | null | undefined) => {
+    if (!date) return '--/--';
+    return new Intl.DateTimeFormat('pt-BR').format(new Date(`${date}T12:00:00`));
   };
 
   return (
@@ -348,6 +355,20 @@ function Dashboard() {
                     <h4 className="text-base font-semibold text-white">Gasto diário por API Key</h4>
                     <span className="text-xs text-gray-400">Top chaves do período</span>
                   </div>
+                  {apiKeyTimeSeriesCoverage?.isDelayed && apiKeyTimeSeries.length > 0 && (
+                    <div className="mb-4 flex items-start gap-3 rounded-xl border border-amber-500/20 bg-amber-500/10 px-4 py-3">
+                      <AlertTriangle className="mt-0.5 flex-shrink-0 text-amber-400" size={16} />
+                      <div>
+                        <p className="text-sm font-medium text-amber-200">
+                          Dados por API key ainda não contabilizados nos dias mais recentes
+                        </p>
+                        <p className="mt-1 text-xs text-amber-100/80">
+                          Último dia com atribuição por key: {formatCoverageDate(apiKeyTimeSeriesCoverage.latestAvailableDate)}.
+                          {' '}O dashboard geral já possui dados até {formatCoverageDate(apiKeyTimeSeriesCoverage.latestDashboardDate)}.
+                        </p>
+                      </div>
+                    </div>
+                  )}
                   {apiKeyTimeSeriesLoading ? (
                     <div className="h-80 bg-[#161616] animate-pulse rounded-xl"></div>
                   ) : apiKeyTimeSeries.length > 0 ? (
