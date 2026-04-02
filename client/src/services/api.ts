@@ -3,7 +3,7 @@ import type {
   DashboardSummary, TimeSeriesData, ModelMetrics, Insight, CurrencyInfo, 
   OpenRouterCredits, ApiResponse, SyncResponse, DashboardStatus, RangeOption, 
   SyncStatus, ProviderMetrics, ApiKeyMetrics, HourlyMetrics, TokenMetrics,
-  ExtendedDashboardData 
+  ExtendedDashboardData, ApiKeyTimeSeriesPoint
 } from '../types';
 
 const api = axios.create({
@@ -76,6 +76,11 @@ export const apiService = {
 
   async getApiKeyMetrics(range: string): Promise<ApiResponse<ApiKeyMetrics[]>> {
     const response = await api.get<ApiResponse<ApiKeyMetrics[]>>('/dashboard/apikeys', { params: { range } });
+    return response.data;
+  },
+
+  async getApiKeyTimeSeries(range: string): Promise<ApiResponse<ApiKeyTimeSeriesPoint[]>> {
+    const response = await api.get<ApiResponse<ApiKeyTimeSeriesPoint[]>>('/dashboard/apikeys/timeseries', { params: { range } });
     return response.data;
   },
 

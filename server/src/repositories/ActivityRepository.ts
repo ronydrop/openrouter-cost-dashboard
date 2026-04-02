@@ -1,5 +1,5 @@
 import { getDb, saveDatabase } from '../database/index.js';
-import { ActivityItem, NormalizedActivityItem, CreditSnapshot, SyncLog, ApiKeyRecord } from '../types.js';
+import { ActivityItem, NormalizedActivityItem, CreditSnapshot, SyncLog, ApiKeyRecord, ApiKeyTimeSeriesEntry } from '../types.js';
 import { TimeRange } from '../utils/dateRanges.js';
 import { query, transaction, isPostgresConfigured } from '../database/postgres.js';
 
@@ -844,6 +844,64 @@ export class ActivityRepository {
       const obj: any = {};
       cols.forEach((col: string, i: number) => obj[col] = row[i]);
       return obj;
+    });
+  }
+
+  async getApiKeyDailySeries(range: TimeRange): Promise<ApiKeyTimeSeriesEntry[]> {
+    if (isPostgresConfigured()) {
+      const result = await query(
+        `SELECT 
+           DATE(timestamp AT TIME ZONE 'UTC')::text as date,
+           api_key_name,
+           COALESCE(SUM(cost), 0) as total_cost,
+           COUNT(*) as total_requests
+         FROM activity_logs
+         WHERE api_key_name IS NOT NULL
+           AND api_key_name <> ''
+           AND timestamp >= $1
+           AND timestamp <= $2
+         GROUP BY 1, 2
+         ORDER BY 1 ASC, 3 DESC`,
+        [range.start, range.end]
+      );
+
+      return result.rows.map((row: any) => ({
+        date: row.date,
+        api_key_name: row.api_key_name,
+        total_cost: this.n(row.total_cost),
+        total_requests: this.n(row.total_requests),
+      }));
+    }
+
+    const db = await getDb();
+    const result = db.exec(
+      `SELECT
+         substr(timestamp, 1, 10) as date,
+         api_key_name,
+         COALESCE(SUM(cost), 0) as total_cost,
+         COUNT(*) as total_requests
+       FROM activity_logs
+       WHERE api_key_name IS NOT NULL
+         AND api_key_name <> ''
+         AND timestamp >= ?
+         AND timestamp <= ?
+       GROUP BY date, api_key_name
+       ORDER BY date ASC, total_cost DESC`,
+      [range.start, range.end]
+    );
+
+    if (!result.length) return [];
+
+    const cols = result[0].columns;
+    return result[0].values.map((row: any[]) => {
+      const obj: any = {};
+      cols.forEach((col: string, i: number) => obj[col] = row[i]);
+      return {
+        date: obj.date,
+        api_key_name: obj.api_key_name,
+        total_cost: this.n(obj.total_cost),
+        total_requests: this.n(obj.total_requests),
+      };
     });
   }
 

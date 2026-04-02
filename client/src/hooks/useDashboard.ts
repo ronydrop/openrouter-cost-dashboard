@@ -72,6 +72,13 @@ export const useApiKeyMetrics = (range: string) => useQuery({
   retry: 1 
 });
 
+export const useApiKeyTimeSeries = (range: string) => useQuery({
+  queryKey: ['apiKeyTimeSeries', range],
+  queryFn: () => apiService.getApiKeyTimeSeries(range),
+  staleTime: 2 * 60 * 1000,
+  retry: 1
+});
+
 export const useHourlyMetrics = (range: string) => useQuery({ 
   queryKey: ['hourlyMetrics', range], 
   queryFn: () => apiService.getHourlyMetrics(range), 

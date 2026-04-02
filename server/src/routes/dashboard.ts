@@ -66,6 +66,17 @@ router.get('/apikeys', async (req: Request, res: Response) => {
   }
 });
 
+router.get('/apikeys/timeseries', async (req: Request, res: Response) => {
+  try {
+    const { range = 'last30days' } = req.query;
+    const { data, cached } = await aggregationService.buildApiKeyTimeSeries(range as string);
+    res.json({ data, range: parseRange(range as string), cached, timestamp: new Date().toISOString() });
+  } catch (error: any) {
+    console.error('Error in /api/dashboard/apikeys/timeseries:', error.message);
+    res.status(500).json({ error: 'Failed to get API key time series', message: error.message });
+  }
+});
+
 // Hourly metrics endpoint (for heatmap)
 router.get('/hourly', async (req: Request, res: Response) => {
   try {

@@ -1,12 +1,12 @@
 import { useState, useEffect } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { DashboardHeader, SummaryCards, SpendOverTimeChart, SpendByModelChart, InsightCard, ModelCostTable, SyncButton } from './components';
-import { useDashboardSummary, useTimeSeries, useModelMetrics, useInsights, useSyncData, useProviderMetrics, useApiKeyMetrics, useTokenMetrics } from './hooks/useDashboard';
+import { DashboardHeader, SummaryCards, SpendOverTimeChart, SpendByModelChart, ModelCostTable, SyncButton } from './components';
+import { useDashboardSummary, useTimeSeries, useModelMetrics, useSyncData, useProviderMetrics, useApiKeyMetrics, useApiKeyTimeSeries, useTokenMetrics } from './hooks/useDashboard';
 import { useAutoSync } from './hooks/useAutoSync';
 import { apiService } from './services/api';
-import type { DateRange } from './types';
+import type { DateRange, ApiKeyTimeSeriesPoint } from './types';
 import { 
-  PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip
+  PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, LineChart, Line, CartesianGrid, Legend
 } from 'recharts';
 
 const queryClient = new QueryClient({ defaultOptions: { queries: { refetchOnWindowFocus: false, retry: 1 } } });
@@ -24,17 +24,17 @@ function Dashboard() {
   const { data: summaryResponse, isLoading: summaryLoading } = useDashboardSummary(rangeToUse);
   const { data: timeSeriesResponse, isLoading: timeSeriesLoading } = useTimeSeries(rangeToUse);
   const { data: modelMetricsResponse, isLoading: modelMetricsLoading } = useModelMetrics(rangeToUse);
-  const { data: insightsResponse, isLoading: insightsLoading } = useInsights(rangeToUse);
   const { data: providerMetricsResponse, isLoading: providerLoading } = useProviderMetrics(rangeToUse);
   const { data: apiKeyMetricsResponse, isLoading: apiKeyLoading } = useApiKeyMetrics(rangeToUse);
+  const { data: apiKeyTimeSeriesResponse, isLoading: apiKeyTimeSeriesLoading } = useApiKeyTimeSeries(rangeToUse);
   const { data: tokenMetricsResponse } = useTokenMetrics(rangeToUse);
 
   const summary = summaryResponse?.data;
   const timeSeries = timeSeriesResponse?.data;
   const modelMetrics = modelMetricsResponse?.data;
-  const insights = insightsResponse?.data;
   const providerMetrics = providerMetricsResponse?.data;
   const apiKeyMetrics = apiKeyMetricsResponse?.data;
+  const apiKeyTimeSeries = apiKeyTimeSeriesResponse?.data || [];
   const tokenMetrics = tokenMetricsResponse?.data;
   const syncMutation = useSyncData();
 
@@ -107,6 +107,46 @@ function Dashboard() {
     percent: k.percentOfTotal * 100,
     color: COLORS[i % COLORS.length],
   })) || [];
+
+  const apiKeySeriesKeys = apiKeyTimeSeries.length > 0
+    ? Object.keys(apiKeyTimeSeries[0]).filter((key) => key !== 'date' && !key.endsWith('__brl'))
+    : [];
+
+  const apiKeySeriesColors = apiKeySeriesKeys.reduce<Record<string, string>>((acc, key, index) => {
+    acc[key] = COLORS[index % COLORS.length];
+    return acc;
+  }, {});
+
+  const apiKeyDailyTooltip = ({ active, payload, label }: { active?: boolean; payload?: Array<{ dataKey?: string | number; value?: number; payload?: ApiKeyTimeSeriesPoint }>; label?: string }) => {
+    if (!active || !payload?.length) return null;
+
+    return (
+      <div className="bg-[#1c1c1e] border border-[#3a3a3a] rounded-xl p-4 shadow-2xl min-w-[240px]" style={{ color: '#f8fafc' }}>
+        <p className="text-sm font-semibold text-white mb-3">{label}</p>
+        <div className="space-y-2">
+          {payload
+            .filter((entry) => typeof entry.value === 'number' && entry.value! > 0)
+            .sort((a, b) => (Number(b.value) - Number(a.value)))
+            .map((entry) => {
+              const key = String(entry.dataKey || '');
+              const brl = Number(entry.payload?.[`${key}__brl`] || 0);
+              return (
+                <div key={key} className="flex items-start justify-between gap-4 text-xs">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <span className="w-2.5 h-2.5 rounded-full mt-1 flex-shrink-0" style={{ backgroundColor: apiKeySeriesColors[key] }} />
+                    <span className="text-slate-300 truncate">{key}</span>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-white font-medium">$ {Number(entry.value).toFixed(2)}</div>
+                    <div className="text-slate-400">R$ {brl.toFixed(2)}</div>
+                  </div>
+                </div>
+              );
+            })}
+        </div>
+      </div>
+    );
+  };
 
   return (
     <div className="min-h-screen bg-[#0a0a0a] text-gray-100">
@@ -246,7 +286,8 @@ function Dashboard() {
             {apiKeyLoading ? (
               <div className="h-64 bg-[#1c1c1e] animate-pulse rounded-xl"></div>
             ) : apiKeyChartData.length > 0 ? (
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <div className="space-y-8">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 <div className="h-64">
                   <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
@@ -300,6 +341,43 @@ function Dashboard() {
                     </BarChart>
                   </ResponsiveContainer>
                 </div>
+                </div>
+
+                <div className="bg-[#1c1c1e] border border-[#2a2a2a] rounded-xl p-5">
+                  <div className="flex items-center justify-between mb-4">
+                    <h4 className="text-base font-semibold text-white">Gasto diário por API Key</h4>
+                    <span className="text-xs text-gray-400">Top chaves do período</span>
+                  </div>
+                  {apiKeyTimeSeriesLoading ? (
+                    <div className="h-80 bg-[#161616] animate-pulse rounded-xl"></div>
+                  ) : apiKeyTimeSeries.length > 0 ? (
+                    <div className="h-80">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <LineChart data={apiKeyTimeSeries}>
+                          <CartesianGrid strokeDasharray="3 3" stroke="#2a2a2a" />
+                          <XAxis dataKey="date" stroke="#737373" fontSize={11} tickLine={false} axisLine={false} />
+                          <YAxis stroke="#737373" fontSize={11} tickFormatter={(v) => `$ ${Number(v).toFixed(0)}`} tickLine={false} axisLine={false} />
+                          <Tooltip content={apiKeyDailyTooltip} />
+                          <Legend wrapperStyle={{ color: '#d4d4d8', fontSize: '12px' }} />
+                          {apiKeySeriesKeys.map((key) => (
+                            <Line
+                              key={key}
+                              type="monotone"
+                              dataKey={key}
+                              stroke={apiKeySeriesColors[key]}
+                              strokeWidth={2}
+                              dot={{ r: 2 }}
+                              activeDot={{ r: 4 }}
+                              connectNulls
+                            />
+                          ))}
+                        </LineChart>
+                      </ResponsiveContainer>
+                    </div>
+                  ) : (
+                    <div className="h-80 flex items-center justify-center text-gray-500">Sem série diária disponível</div>
+                  )}
+                </div>
               </div>
             ) : (
               <div className="h-64 flex items-center justify-center text-gray-500">Sem dados disponíveis</div>
@@ -343,10 +421,6 @@ function Dashboard() {
 
         <section className="mb-8">
           <SpendByModelChart data={modelMetrics} loading={modelMetricsLoading} />
-        </section>
-        
-        <section className="mb-8">
-          <InsightCard insights={insights} loading={insightsLoading} />
         </section>
         
         <section className="mb-8">

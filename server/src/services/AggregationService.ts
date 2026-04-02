@@ -5,7 +5,7 @@ import { activityRepository } from '../repositories/ActivityRepository.js';
 import { 
   NormalizedActivityItem, DailyMetrics, ModelMetrics, DashboardSummary, 
   TimeSeriesData, Insight, ProviderMetrics, ApiKeyMetrics, HourlyMetrics,
-  EndpointMetrics, TokenMetrics, ExtendedDashboardData
+  EndpointMetrics, TokenMetrics, ExtendedDashboardData, ApiKeyTimeSeriesPoint
 } from '../types.js';
 import { getExchangeRate, convertToBrl } from './exchangeRate.js';
 import { parseRange, TimeRange, getPreviousPeriod } from '../utils/dateRanges.js';
@@ -51,14 +51,19 @@ export class AggregationService {
 
       const sevenDaysBack = dayjs(latestDataDate).subtract(6, 'day').format('YYYY-MM-DD');
       const thirtyDaysBack = dayjs(latestDataDate).subtract(29, 'day').format('YYYY-MM-DD');
+      const previousDataDate = dayjs(latestDataDate).subtract(1, 'day').format('YYYY-MM-DD');
 
       // Calcular todayCostUsd sempre com base no dia mais recente (independente do range)
       let todayCostUsd = 0;
+      let yesterdayCostUsd = 0;
       for (const activity of last30Activities) {
         if (activity.costUsd <= 0) continue;
         const date = dayjs(activity.timestamp).utc().format('YYYY-MM-DD');
         if (date === latestDataDate) {
           todayCostUsd += activity.costUsd;
+        }
+        if (date === previousDataDate) {
+          yesterdayCostUsd += activity.costUsd;
         }
       }
 
@@ -94,6 +99,8 @@ export class AggregationService {
         remainingCredits: this.n(credits.remaining_credits),
         todayCostUsd: parseFloat(todayCostUsd.toFixed(4)),
         todayCostBrl: parseFloat(convertToBrl(todayCostUsd, rate).toFixed(2)),
+        yesterdayCostUsd: parseFloat(yesterdayCostUsd.toFixed(4)),
+        yesterdayCostBrl: parseFloat(convertToBrl(yesterdayCostUsd, rate).toFixed(2)),
         last7DaysCostUsd: parseFloat(last7DaysCostUsd.toFixed(4)),
         last7DaysCostBrl: parseFloat(convertToBrl(last7DaysCostUsd, rate).toFixed(2)),
         last30DaysCostUsd: parseFloat(last30DaysCostUsd.toFixed(4)),
@@ -411,6 +418,51 @@ export class AggregationService {
           };
         })
         .sort((a: ApiKeyMetrics, b: ApiKeyMetrics) => b.totalCostUsd - a.totalCostUsd);
+    });
+  }
+
+  async buildApiKeyTimeSeries(rangeStr: string = 'last30days'): Promise<{ data: ApiKeyTimeSeriesPoint[]; cached: boolean }> {
+    const range = parseRange(rangeStr);
+    const cacheKey = getDashboardCacheKey('apikeys-timeseries', rangeStr);
+
+    return withCache(cacheKey, async () => {
+      const currencyInfo = await getExchangeRate();
+      const rate = currencyInfo.rate;
+      const rawSeries = await activityRepository.getApiKeyDailySeries(range);
+
+      if (!rawSeries.length) {
+        return [];
+      }
+
+      const totalsByKey = new Map<string, number>();
+      for (const row of rawSeries) {
+        totalsByKey.set(row.api_key_name, (totalsByKey.get(row.api_key_name) || 0) + row.total_cost);
+      }
+
+      const topKeys = Array.from(totalsByKey.entries())
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 6)
+        .map(([key]) => key);
+
+      const filtered = rawSeries.filter((row) => topKeys.includes(row.api_key_name));
+      const dateMap = new Map<string, ApiKeyTimeSeriesPoint>();
+
+      for (const row of filtered) {
+        if (!dateMap.has(row.date)) {
+          const base: ApiKeyTimeSeriesPoint = { date: row.date };
+          for (const key of topKeys) {
+            base[key] = 0;
+            base[`${key}__brl`] = 0;
+          }
+          dateMap.set(row.date, base);
+        }
+
+        const point = dateMap.get(row.date)!;
+        point[row.api_key_name] = parseFloat(row.total_cost.toFixed(4));
+        point[`${row.api_key_name}__brl`] = parseFloat(convertToBrl(row.total_cost, rate).toFixed(2));
+      }
+
+      return Array.from(dateMap.values()).sort((a, b) => String(a.date).localeCompare(String(b.date)));
     });
   }
 

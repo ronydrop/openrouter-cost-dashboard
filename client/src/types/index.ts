@@ -59,6 +59,11 @@ export interface ApiKeyMetrics {
   lastUsed: string | null;
 }
 
+export interface ApiKeyTimeSeriesPoint {
+  date: string;
+  [apiKey: string]: string | number;
+}
+
 export interface HourlyMetrics {
   hour: string;
   dayOfWeek: string;
@@ -86,6 +91,8 @@ export interface DashboardSummary {
   remainingCredits: number;
   todayCostUsd: number;
   todayCostBrl: number;
+  yesterdayCostUsd: number;
+  yesterdayCostBrl: number;
   last7DaysCostUsd: number;
   last7DaysCostBrl: number;
   last30DaysCostUsd: number;

@@ -82,18 +82,26 @@ export function SpendByModelChart({ data, loading }: SpendByModelChartProps) {
     if (active && payload && payload.length) {
       const chartData = payload[0].payload;
       return (
-        <div className="bg-[#1c1c1e] p-4 border border-[#3a3a3a] rounded-xl shadow-2xl min-w-[200px]">
-          <p className="font-semibold text-white text-sm mb-3 truncate max-w-[250px]">{chartData.fullName}</p>
+        <div
+          className="bg-[#1c1c1e] p-4 border border-[#3a3a3a] rounded-xl shadow-2xl min-w-[200px]"
+          style={{ color: '#f8fafc' }}
+        >
+          <p
+            className="font-semibold text-sm mb-3 truncate max-w-[250px]"
+            style={{ color: '#ffffff' }}
+          >
+            {chartData.fullName}
+          </p>
           <div className="space-y-2">
             <div>
-              <p className="text-gray-400 text-xs mb-1">Custo</p>
-              <p className="text-white font-semibold">{formatCurrency(chartData.value)}</p>
-              <p className="text-gray-500 text-xs">{formatCurrencyBrl(chartData.valueBrl)}</p>
+              <p className="text-xs mb-1" style={{ color: '#94a3b8' }}>Custo</p>
+              <p className="font-semibold" style={{ color: '#ffffff' }}>{formatCurrency(chartData.value)}</p>
+              <p className="text-xs" style={{ color: '#cbd5e1' }}>{formatCurrencyBrl(chartData.valueBrl)}</p>
             </div>
             <div className="pt-2 border-t border-[#2a2a2a]">
               <div className="flex justify-between text-xs">
-                <span className="text-gray-500">Participação:</span>
-                <span className="text-gray-300">{formatPercent(chartData.percent)}</span>
+                <span style={{ color: '#94a3b8' }}>Participação:</span>
+                <span style={{ color: '#e2e8f0' }}>{formatPercent(chartData.percent)}</span>
               </div>
             </div>
           </div>
