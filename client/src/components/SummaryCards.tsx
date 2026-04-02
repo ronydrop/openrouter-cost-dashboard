@@ -53,8 +53,8 @@ export function SummaryCards({ data, loading }: SummaryCardsProps) {
     : undefined;
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-      <div className="bg-white dark:bg-[#161616] border border-gray-200 dark:border-[#2a2a2a] rounded-2xl p-5">
+    <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="bg-white dark:bg-[#161616] border border-gray-200 dark:border-[#2a2a2a] rounded-2xl p-5 md:col-span-1">
         <div className="flex items-center justify-between mb-3">
           <span className="text-sm text-slate-500 dark:text-gray-400 font-medium">Gastos Hoje</span>
           <span className="text-xs text-slate-500 dark:text-gray-500 bg-gray-100 dark:bg-[#1c1c1e] px-2.5 py-1 rounded-full border border-gray-200 dark:border-[#2a2a2a]">
@@ -72,7 +72,7 @@ export function SummaryCards({ data, loading }: SummaryCardsProps) {
         <p className="text-xs text-slate-500 dark:text-gray-500">Último dia disponível na API</p>
       </div>
 
-      <div className="bg-white dark:bg-[#161616] border border-gray-200 dark:border-[#2a2a2a] rounded-2xl p-5">
+      <div className="bg-white dark:bg-[#161616] border border-gray-200 dark:border-[#2a2a2a] rounded-2xl p-5 md:col-span-1">
         <div className="flex items-center justify-between mb-3">
           <span className="text-sm text-slate-500 dark:text-gray-400 font-medium">Gastos Ontem</span>
           <span className="text-xs text-slate-500 dark:text-gray-500 bg-gray-100 dark:bg-[#1c1c1e] px-2.5 py-1 rounded-full border border-gray-200 dark:border-[#2a2a2a]">
@@ -90,7 +90,7 @@ export function SummaryCards({ data, loading }: SummaryCardsProps) {
         <p className="text-xs text-slate-500 dark:text-gray-500">Comparativo do dia anterior</p>
       </div>
 
-      <div className="bg-white dark:bg-[#161616] border border-gray-200 dark:border-[#2a2a2a] rounded-2xl p-6">
+      <div className="bg-white dark:bg-[#161616] border border-gray-200 dark:border-[#2a2a2a] rounded-2xl p-6 md:col-span-2">
         <div className="flex items-center justify-between mb-4">
           <span className="text-sm text-slate-500 dark:text-gray-400 font-medium">Saldo Disponível</span>
           <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${
@@ -138,7 +138,7 @@ export function SummaryCards({ data, loading }: SummaryCardsProps) {
       </div>
 
       {/* Stats Row */}
-      <div className="md:col-span-3 grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="md:col-span-4 grid grid-cols-2 md:grid-cols-4 gap-4">
         <div className="bg-white dark:bg-[#161616] border border-gray-200 dark:border-[#2a2a2a] rounded-2xl p-5">
           <p className="text-sm text-slate-500 dark:text-gray-400 mb-2">Últimos 7 dias</p>
           <div className="flex items-baseline gap-1.5">
