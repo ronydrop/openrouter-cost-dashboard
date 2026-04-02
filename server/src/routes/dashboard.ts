@@ -1,8 +1,8 @@
 import { Router, Request, Response } from 'express';
-import { aggregationService } from '../services/AggregationService';
-import { parseRange, getAvailableRanges } from '../utils/dateRanges';
-import { activityRepository } from '../repositories/ActivityRepository';
-import { getCacheStats, clearCache } from '../services/cache';
+import { aggregationService } from '../services/AggregationService.js';
+import { parseRange, getAvailableRanges } from '../utils/dateRanges.js';
+import { activityRepository } from '../repositories/ActivityRepository.js';
+import { getCacheStats, clearCache } from '../services/cache.js';
 
 const router = Router();
 

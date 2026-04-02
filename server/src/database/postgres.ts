@@ -6,6 +6,8 @@ import path from 'path';
 dotenv.config();
 
 let pool: Pool | null = null;
+const postgresRequested = !!(process.env.DATABASE_URL || (process.env.PG_HOST && process.env.PG_DATABASE));
+let postgresReady = false;
 
 export interface PostgresConfig {
   host: string;
@@ -37,6 +39,10 @@ function getConfig(): PostgresConfig {
 }
 
 export function getPool(): Pool {
+  if (!postgresRequested) {
+    throw new Error('PostgreSQL is not configured');
+  }
+
   if (!pool) {
     const config = getConfig();
     console.log(`[PG] Connecting to PostgreSQL at ${config.host}:${config.port}/${config.database}`);
@@ -102,6 +108,11 @@ export async function transaction<T>(callback: (client: PoolClient) => Promise<T
 }
 
 export async function initializePostgres(): Promise<void> {
+  if (!postgresRequested) {
+    postgresReady = false;
+    return;
+  }
+
   const pool = getPool();
   
   try {
@@ -114,7 +125,10 @@ export async function initializePostgres(): Promise<void> {
     console.log('[PG] Running migrations...');
     await runMigrations(pool);
     console.log('[PG] Migrations complete');
+    postgresReady = true;
   } catch (error: any) {
+    postgresReady = false;
+    await closePool();
     console.error('[PG] Failed to initialize:', error.message);
     throw error;
   }
@@ -154,7 +168,11 @@ export async function closePool(): Promise<void> {
 }
 
 export function isPostgresConfigured(): boolean {
-  return !!(process.env.DATABASE_URL || (process.env.PG_HOST && process.env.PG_DATABASE));
+  return postgresRequested && postgresReady;
+}
+
+export function hasPostgresConfig(): boolean {
+  return postgresRequested;
 }
 
 export default {
@@ -165,4 +183,5 @@ export default {
   initializePostgres,
   closePool,
   isPostgresConfigured,
+  hasPostgresConfig,
 };

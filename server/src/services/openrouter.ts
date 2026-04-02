@@ -1,6 +1,6 @@
 import axios from 'axios';
 import dotenv from 'dotenv';
-import type { NormalizedActivityItem, OpenRouterCredits, OpenRouterActivityItem } from '../types';
+import type { NormalizedActivityItem, OpenRouterCredits, OpenRouterActivityItem } from '../types.js';
 
 dotenv.config();
 
@@ -123,8 +123,11 @@ function normalizeActivities(activities: any[]): NormalizedActivityItem[] {
       requests: typeof requests === 'number' ? requests : 1,
       promptTokens: typeof promptTokens === 'number' ? promptTokens : 0,
       completionTokens: typeof completionTokens === 'number' ? completionTokens : 0,
+      reasoningTokens: 0,
+      cachedTokens: 0,
       totalTokens: (typeof promptTokens === 'number' ? promptTokens : 0) + (typeof completionTokens === 'number' ? completionTokens : 0),
       costUsd: typeof cost === 'number' ? cost : 0,
+      success: true,
     };
   });
 }
@@ -173,8 +176,11 @@ function generateSampleData(startDate?: string, endDate?: string): NormalizedAct
         requests: 1,
         promptTokens,
         completionTokens,
+        reasoningTokens: 0,
+        cachedTokens: 0,
         totalTokens: promptTokens + completionTokens,
         costUsd: parseFloat(cost.toFixed(6)),
+        success: true,
       });
     }
     

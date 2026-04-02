@@ -1,8 +1,8 @@
 import axios, { AxiosError } from 'axios';
-import { activityRepository } from '../repositories/ActivityRepository';
-import { ActivityItem, SyncLog } from '../types';
-import { parseRange, TimeRange } from '../utils/dateRanges';
-import { invalidateCache } from './cache';
+import { activityRepository } from '../repositories/ActivityRepository.js';
+import { ActivityItem, SyncLog } from '../types.js';
+import { parseRange, TimeRange } from '../utils/dateRanges.js';
+import { invalidateCache } from './cache.js';
 import dotenv from 'dotenv';
 
 dotenv.config();

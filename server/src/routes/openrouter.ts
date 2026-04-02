@@ -1,5 +1,5 @@
 import { Router, Request, Response } from 'express';
-import { getCredits, getActivity, checkApiHealth } from '../services/openrouter';
+import { getCredits, getActivity, checkApiHealth } from '../services/openrouter.js';
 
 const router = Router();
 

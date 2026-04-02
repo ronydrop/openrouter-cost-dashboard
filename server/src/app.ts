@@ -10,7 +10,7 @@ import exchangeRateRoutes from './routes/exchangeRate.js';
 import syncRoutes from './routes/sync.js';
 import { getDb } from './database/index.js';
 import { getCacheStats, clearCache } from './services/cache.js';
-import { initializePostgres, isPostgresConfigured, closePool } from './database/postgres.js';
+import { initializePostgres, isPostgresConfigured, hasPostgresConfig, closePool } from './database/postgres.js';
 import { activityRepository } from './repositories/ActivityRepository.js';
 
 const app: Application = express();
@@ -31,16 +31,23 @@ let isAppReady = false;
 
 async function initApp(): Promise<void> {
   console.log('[App] Starting initialization...');
-  console.log('[App] PostgreSQL configured:', isPostgresConfigured());
+  console.log('[App] PostgreSQL requested:', hasPostgresConfig());
 
   try {
-    if (isPostgresConfigured()) {
+    if (hasPostgresConfig()) {
       console.log('[App] Initializing PostgreSQL...');
-      await initializePostgres();
-      console.log('[App] PostgreSQL initialized successfully');
+      try {
+        await initializePostgres();
+        console.log('[App] PostgreSQL initialized successfully');
+      } catch (error: any) {
+        console.error('[App] PostgreSQL unavailable, falling back to SQLite:', error.message);
+        console.log('[App] Initializing SQLite...');
+        await getDb();
+        console.log('[App] SQLite initialized successfully');
+      }
     } else {
       console.log('[App] Initializing SQLite...');
-      const db = await getDb();
+      await getDb();
       console.log('[App] SQLite initialized successfully');
     }
 
@@ -56,7 +63,7 @@ async function initApp(): Promise<void> {
   } catch (error: any) {
     console.error('[App] Database initialization failed:', error.message);
     console.error('[App] Stack:', error.stack);
-    isAppReady = true;
+    isAppReady = false;
   }
 }
 

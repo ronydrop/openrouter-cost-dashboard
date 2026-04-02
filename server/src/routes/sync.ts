@@ -1,6 +1,6 @@
 import { Router, Request, Response } from 'express';
-import { activityIngestionService } from '../services/ActivityIngestionService';
-import { activityRepository } from '../repositories/ActivityRepository';
+import { activityIngestionService } from '../services/ActivityIngestionService.js';
+import { activityRepository } from '../repositories/ActivityRepository.js';
 
 const router = Router();
 

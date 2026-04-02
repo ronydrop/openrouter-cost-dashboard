@@ -1,15 +1,15 @@
 import dayjs from 'dayjs';
-import dayOfYear from 'dayjs/plugin/dayOfYear';
-import utc from 'dayjs/plugin/utc';
-import { activityRepository } from '../repositories/ActivityRepository';
+import dayOfYear from 'dayjs/plugin/dayOfYear.js';
+import utc from 'dayjs/plugin/utc.js';
+import { activityRepository } from '../repositories/ActivityRepository.js';
 import { 
   NormalizedActivityItem, DailyMetrics, ModelMetrics, DashboardSummary, 
   TimeSeriesData, Insight, ProviderMetrics, ApiKeyMetrics, HourlyMetrics,
   EndpointMetrics, TokenMetrics, ExtendedDashboardData
-} from '../types';
-import { getExchangeRate, convertToBrl } from './exchangeRate';
-import { parseRange, TimeRange, getPreviousPeriod } from '../utils/dateRanges';
-import { withCache, getDashboardCacheKey } from './cache';
+} from '../types.js';
+import { getExchangeRate, convertToBrl } from './exchangeRate.js';
+import { parseRange, TimeRange, getPreviousPeriod } from '../utils/dateRanges.js';
+import { withCache, getDashboardCacheKey } from './cache.js';
 
 dayjs.extend(dayOfYear);
 dayjs.extend(utc);
@@ -461,7 +461,7 @@ export class AggregationService {
     const range = parseRange(rangeStr);
     const cacheKey = getDashboardCacheKey('tokens', rangeStr);
 
-    return withCache(cacheKey, async () => {
+    const { data, cached } = await withCache(cacheKey, async (): Promise<TokenMetrics> => {
       const activities = await this.getActivitiesForRange(range);
 
       let totalPromptTokens = 0;
@@ -489,8 +489,10 @@ export class AggregationService {
         cachedPercent: totalTokens > 0 ? (totalCachedTokens / totalTokens) * 100 : 0,
       };
 
-      return { data, cached: false };
+      return data;
     });
+
+    return { data, cached };
   }
 
   // ============ EXTENDED DASHBOARD ============
@@ -498,7 +500,7 @@ export class AggregationService {
     const range = parseRange(rangeStr);
     const cacheKey = getDashboardCacheKey('extended', rangeStr);
 
-    return withCache(cacheKey, async () => {
+    const { data, cached } = await withCache(cacheKey, async (): Promise<ExtendedDashboardData> => {
       const [summary, providers, apiKeys, hourly, tokens, models] = await Promise.all([
         this.buildSummary(rangeStr),
         this.buildProviderMetrics(rangeStr),
@@ -520,17 +522,17 @@ export class AggregationService {
         }));
 
       return {
-        data: {
-          summary: summary.data,
-          providers: providers.data,
-          apiKeys: apiKeys.data,
-          hourly: hourly.data,
-          tokens: tokens.data,
-          topRequests,
-        },
-        cached: summary.cached,
+        summary: summary.data,
+        providers: providers.data,
+        apiKeys: apiKeys.data,
+        hourly: hourly.data,
+        endpoints: [],
+        tokens: tokens.data,
+        topRequests,
       };
     });
+
+    return { data, cached };
   }
 
   // ============ INSIGHTS ============

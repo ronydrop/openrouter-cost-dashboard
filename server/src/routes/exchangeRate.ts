@@ -1,5 +1,5 @@
 import { Router, Request, Response } from 'express';
-import { getExchangeRate, setManualRate, useAutoRate } from '../services/exchangeRate';
+import { getExchangeRate, setManualRate, useAutoRate } from '../services/exchangeRate.js';
 
 const router = Router();
 

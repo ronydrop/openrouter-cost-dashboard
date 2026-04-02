@@ -4,6 +4,10 @@ import { TimeRange } from '../utils/dateRanges.js';
 import { query, transaction, isPostgresConfigured } from '../database/postgres.js';
 
 export class ActivityRepository {
+  private toIsoString(value: unknown): string {
+    return value instanceof Date ? value.toISOString() : String(value ?? '');
+  }
+
   // PostgreSQL retorna DECIMAL/BIGINT como strings — forçar conversão
   private n(val: any): number {
     if (val === null || val === undefined) return 0;
@@ -19,7 +23,7 @@ export class ActivityRepository {
       task_id: row.task_id || undefined,
       user_id: row.user_id || undefined,
       request_id: row.request_id,
-      timestamp: row.timestamp instanceof Date ? row.timestamp.toISOString() : row.timestamp,
+      timestamp: this.toIsoString(row.timestamp),
       model: row.model,
       provider: row.provider_name || row.provider || 'unknown',
       provider_name: row.provider_name || undefined,
@@ -42,14 +46,16 @@ export class ActivityRepository {
       feature_name: row.feature_name || undefined,
       metadata: row.metadata || undefined,
       meta: row.metadata ? (typeof row.metadata === 'string' ? JSON.parse(row.metadata) : row.metadata) : undefined,
-      created_at: row.created_at instanceof Date ? row.created_at.toISOString() : row.created_at,
-      updated_at: row.updated_at instanceof Date ? row.updated_at.toISOString() : row.updated_at,
+      created_at: this.toIsoString(row.created_at),
+      updated_at: this.toIsoString(row.updated_at),
     };
   }
 
   activityToNormalized(item: ActivityItem): NormalizedActivityItem {
+    const successValue = item.success;
+
     return {
-      timestamp: item.timestamp instanceof Date ? (item.timestamp as any).toISOString() : item.timestamp,
+      timestamp: this.toIsoString(item.timestamp),
       model: item.model,
       provider: item.provider || item.provider_name || 'unknown',
       requests: 1,
@@ -60,7 +66,7 @@ export class ActivityRepository {
       totalTokens: this.n(item.total_tokens),
       costUsd: this.n(item.cost ?? item.cost_usd),
       responseTimeMs: item.response_time_ms != null ? this.n(item.response_time_ms) : undefined,
-      success: item.success !== undefined ? (item.success === 1 || item.success === true) : true,
+      success: successValue !== undefined ? successValue === 1 : true,
       apiKeyName: item.api_key_name,
       endpoint: item.endpoint,
       environment: item.environment,
@@ -106,14 +112,14 @@ export class ActivityRepository {
 
   private async findByModelSQLite(model: string, range?: TimeRange): Promise<ActivityItem[]> {
     const db = await getDb();
-    let query = 'SELECT * FROM activity_logs WHERE model = ?';
+    let sql = 'SELECT * FROM activity_logs WHERE model = ?';
     const params: any[] = [model];
     if (range) {
-      query += ' AND timestamp >= ? AND timestamp <= ?';
+      sql += ' AND timestamp >= ? AND timestamp <= ?';
       params.push(range.start, range.end);
     }
-    query += ' ORDER BY timestamp DESC';
-    const result = db.exec(query, params);
+    sql += ' ORDER BY timestamp DESC';
+    const result = db.exec(sql, params);
     if (!result.length) return [];
     const cols = result[0].columns;
     return result[0].values.map((row: any[]) => {
@@ -144,14 +150,14 @@ export class ActivityRepository {
 
   private async findByApiKeySQLite(apiKeyName: string, range?: TimeRange): Promise<ActivityItem[]> {
     const db = await getDb();
-    let query = 'SELECT * FROM activity_logs WHERE api_key_name = ?';
+    let sql = 'SELECT * FROM activity_logs WHERE api_key_name = ?';
     const params: any[] = [apiKeyName];
     if (range) {
-      query += ' AND timestamp >= ? AND timestamp <= ?';
+      sql += ' AND timestamp >= ? AND timestamp <= ?';
       params.push(range.start, range.end);
     }
-    query += ' ORDER BY timestamp DESC';
-    const result = db.exec(query, params);
+    sql += ' ORDER BY timestamp DESC';
+    const result = db.exec(sql, params);
     if (!result.length) return [];
     const cols = result[0].columns;
     return result[0].values.map((row: any[]) => {
@@ -521,7 +527,7 @@ export class ActivityRepository {
     }
 
     const db = await getDb();
-    let query = `
+    let sql = `
       SELECT 
         provider_name as provider,
         SUM(cost) as total_cost,
@@ -532,12 +538,12 @@ export class ActivityRepository {
     const params: any[] = [];
     
     if (range) {
-      query += ' WHERE timestamp >= ? AND timestamp <= ?';
+      sql += ' WHERE timestamp >= ? AND timestamp <= ?';
       params.push(range.start, range.end);
     }
     
-    query += ' GROUP BY provider_name ORDER BY total_cost DESC';
-    const result = db.exec(query, params);
+    sql += ' GROUP BY provider_name ORDER BY total_cost DESC';
+    const result = db.exec(sql, params);
     if (!result.length) return [];
     
     const cols = result[0].columns;
@@ -573,7 +579,7 @@ export class ActivityRepository {
     }
 
     const db = await getDb();
-    let query = `
+    let sql = `
       SELECT 
         api_key_name,
         SUM(cost) as total_cost,
@@ -586,12 +592,12 @@ export class ActivityRepository {
     const params: any[] = [];
     
     if (range) {
-      query += ' AND timestamp >= ? AND timestamp <= ?';
+      sql += ' AND timestamp >= ? AND timestamp <= ?';
       params.push(range.start, range.end);
     }
     
-    query += ' GROUP BY api_key_name ORDER BY total_cost DESC';
-    const result = db.exec(query, params);
+    sql += ' GROUP BY api_key_name ORDER BY total_cost DESC';
+    const result = db.exec(sql, params);
     if (!result.length) return [];
     
     const cols = result[0].columns;
@@ -625,7 +631,7 @@ export class ActivityRepository {
     }
 
     const db = await getDb();
-    let query = `
+    let sql = `
       SELECT 
         strftime('%H', timestamp) as hour,
         strftime('%w', timestamp) as day_of_week,
@@ -636,12 +642,12 @@ export class ActivityRepository {
     const params: any[] = [];
     
     if (range) {
-      query += ' WHERE timestamp >= ? AND timestamp <= ?';
+      sql += ' WHERE timestamp >= ? AND timestamp <= ?';
       params.push(range.start, range.end);
     }
     
-    query += ' GROUP BY hour, day_of_week ORDER BY hour, day_of_week';
-    const result = db.exec(query, params);
+    sql += ' GROUP BY hour, day_of_week ORDER BY hour, day_of_week';
+    const result = db.exec(sql, params);
     if (!result.length) return [];
     
     const cols = result[0].columns;
@@ -679,7 +685,7 @@ export class ActivityRepository {
     }
 
     const db = await getDb();
-    let query = `
+    let sql = `
       SELECT 
         SUM(prompt_tokens) as total_prompt,
         SUM(completion_tokens) as total_completion,
@@ -691,11 +697,11 @@ export class ActivityRepository {
     const params: any[] = [];
     
     if (range) {
-      query += ' WHERE timestamp >= ? AND timestamp <= ?';
+      sql += ' WHERE timestamp >= ? AND timestamp <= ?';
       params.push(range.start, range.end);
     }
     
-    const result = db.exec(query, params);
+    const result = db.exec(sql, params);
     if (!result.length || !result[0].values[0][0]) {
       return { total_prompt: 0, total_completion: 0, total_reasoning: 0, total_cached: 0, total_tokens: 0 };
     }
